@@ -1,0 +1,47 @@
+node_modules/
+.env
+.env.local
+
+# Session / auth credentials — NEVER commit these
+session/
+session*/
+auth_info*/
+creds.json
+*.session
+session_id.hash
+login.json
+
+# Owner / sudo / user identity — contains real phone numbers
+data/owner.json
+data/sudo.json
+data/premium.json
+data/banned.json
+data/defoults/owner.json
+data/defoults/sudo.json
+data/defoults/premium.json
+
+# Bot runtime state (mutates every message - never commit)
+baileys_store.json
+baileys_store/
+message_backup.json
+data/lidmap.json
+data/defoults/lidmap.json
+data/messageCount.json
+data/defoults/messageCount.json
+data/antibadword.json
+data/antiout.json
+data/antipromote.json
+data/state.json
+data/userGroupData.json
+data/groupTracker.json
+*.log
+
+# Payments / financial config
+data/payments.json
+
+# Temp / build / cache
+tmp/
+temp/
+*.zip
+.local/
+status_capture/

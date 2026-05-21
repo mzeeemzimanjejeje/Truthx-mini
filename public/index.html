@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TRUTH-MD Bot — Get Your Bot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#25d366;--green2:#1db954;--bg:#0a0a0a;--card:#141414;
+  --border:#222;--text:#f0f0f0;--muted:#888;--red:#ff5555;
+}
+body{font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── NAV ── */
+nav{display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,10,.92);backdrop-filter:blur(8px);z-index:99}
+.logo{font-size:1.25rem;font-weight:700;color:var(--green);letter-spacing:.5px}
+.nav-links{display:flex;gap:24px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.9rem;transition:.2s}
+.nav-links a:hover{color:var(--text)}
+
+/* ── HERO ── */
+.hero{text-align:center;padding:90px 24px 60px}
+.hero-badge{display:inline-block;background:#0d2018;border:1px solid var(--green);color:var(--green);font-size:.78rem;padding:5px 14px;border-radius:20px;margin-bottom:22px;letter-spacing:.5px}
+.hero h1{font-size:clamp(2rem,5vw,3.4rem);font-weight:800;line-height:1.15;margin-bottom:18px}
+.hero h1 span{color:var(--green)}
+.hero p{color:var(--muted);font-size:1.05rem;max-width:520px;margin:0 auto 40px;line-height:1.6}
+
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:36px;max-width:480px;width:100%;margin:0 auto;box-shadow:0 8px 40px #0009}
+
+/* ── STEPS ── */
+.steps{display:flex;gap:8px;margin-bottom:28px;position:relative}
+.steps::before{content:'';position:absolute;top:18px;left:18px;right:18px;height:2px;background:var(--border);z-index:0}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1}
+.step-dot{width:36px;height:36px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:var(--muted);transition:.3s}
+.step-dot.active{background:var(--green);color:#000}
+.step-dot.done{background:var(--green);color:#000}
+.step-label{font-size:.7rem;color:var(--muted);text-align:center}
+.step.active .step-label{color:var(--text)}
+
+/* ── PANELS ── */
+.panel{display:none}.panel.active{display:block}
+
+label{display:block;font-size:.82rem;color:var(--muted);margin-bottom:7px;font-weight:500}
+input[type=tel],input[type=text]{width:100%;padding:13px 16px;border:1.5px solid var(--border);border-radius:10px;background:#0d0d0d;color:var(--text);font-size:1rem;outline:none;transition:.2s}
+input:focus{border-color:var(--green)}
+.hint{font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.5}
+.hint a{color:var(--green)}
+
+.btn{width:100%;padding:13px;background:var(--green);color:#000;font-weight:700;font-size:1rem;border:none;border-radius:10px;cursor:pointer;margin-top:18px;transition:.2s;letter-spacing:.2px}
+.btn:hover{background:var(--green2)}
+.btn:disabled{background:#333;color:#666;cursor:not-allowed}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--muted);margin-top:10px}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+
+/* ── PAIRING CODE ── */
+.code-box{background:#0d0d0d;border:1.5px solid var(--green);border-radius:14px;padding:28px 20px;text-align:center;margin:20px 0}
+.code-box .code{font-family:monospace;font-size:2.4rem;letter-spacing:.35em;color:var(--green);font-weight:700;word-break:break-all}
+.code-box .code-sub{color:var(--muted);font-size:.82rem;margin-top:10px;line-height:1.5}
+.code-timer{font-size:.78rem;color:var(--muted);text-align:center;margin-top:6px}
+
+/* ── WAITING SPINNER ── */
+.spin-wrap{text-align:center;padding:30px 0}
+.spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .9s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-wrap p{color:var(--muted);font-size:.9rem}
+
+/* ── SUCCESS ── */
+.success-box{text-align:center;padding:20px 0}
+.success-icon{font-size:3.5rem;margin-bottom:16px}
+.success-box h2{font-size:1.5rem;font-weight:700;color:var(--green);margin-bottom:10px}
+.success-box p{color:var(--muted);font-size:.9rem;line-height:1.6}
+.success-num{background:#0d2018;border:1px solid var(--green);border-radius:8px;padding:10px 16px;font-size:1rem;color:var(--green);font-family:monospace;display:inline-block;margin:14px 0}
+
+/* ── FEATURES ── */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;max-width:900px;margin:60px auto;padding:0 24px}
+.feat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;transition:.2s}
+.feat:hover{border-color:#333}
+.feat-icon{font-size:1.6rem;margin-bottom:12px}
+.feat h3{font-size:1rem;font-weight:600;margin-bottom:6px}
+.feat p{color:var(--muted);font-size:.83rem;line-height:1.5}
+
+/* ── FOOTER ── */
+footer{text-align:center;padding:32px 24px;border-top:1px solid var(--border);color:var(--muted);font-size:.82rem}
+
+/* ── ERROR ── */
+.error-msg{background:#1a0a0a;border:1px solid var(--red);border-radius:8px;padding:12px 14px;color:var(--red);font-size:.85rem;margin-top:14px;display:none}
+.error-msg.show{display:block}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">⚡ TRUTH-MD</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#pair">Get Bot</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">🤖 440+ Commands Available</div>
+  <h1>Your Personal<br/><span>WhatsApp Bot</span><br/>In 60 Seconds</h1>
+  <p>Pair your WhatsApp account once — no session ID needed. Your bot runs 24/7 with AI, media downloads, group management, and more.</p>
+</div>
+
+<!-- CARD -->
+<div id="pair" class="card">
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step active" id="dot1">
+      <div class="step-dot active" id="sdot1">1</div>
+      <div class="step-label">Phone</div>
+    </div>
+    <div class="step" id="dot2">
+      <div class="step-dot" id="sdot2">2</div>
+      <div class="step-label">Pair</div>
+    </div>
+    <div class="step" id="dot3">
+      <div class="step-dot" id="sdot3">✓</div>
+      <div class="step-label">Done</div>
+    </div>
+  </div>
+
+  <!-- Panel 1: Phone entry -->
+  <div class="panel active" id="panel-phone">
+    <label>Your WhatsApp Number</label>
+    <input type="tel" id="phone-input" placeholder="e.g. 254712345678" inputmode="numeric"/>
+    <div class="hint">Enter your number with country code, no + or spaces.<br/>Example: <strong>254712345678</strong> for Kenya 🇰🇪</div>
+    <div class="error-msg" id="phone-error"></div>
+    <button class="btn" id="btn-pair" onclick="startPairing()">Get My Bot →</button>
+  </div>
+
+  <!-- Panel 2: Waiting for pairing code -->
+  <div class="panel" id="panel-wait-code">
+    <div class="spin-wrap">
+      <div class="spinner"></div>
+      <p>Generating your pairing code…</p>
+    </div>
+  </div>
+
+  <!-- Panel 3: Show pairing code -->
+  <div class="panel" id="panel-code">
+    <div class="code-box">
+      <div class="code" id="pairing-code-text">----</div>
+      <div class="code-sub">
+        Open WhatsApp → Settings → Linked Devices → Link a Device<br/>
+        Enter the code above
+      </div>
+    </div>
+    <div class="code-timer" id="code-timer"></div>
+    <div class="spin-wrap" style="padding:16px 0">
+      <div class="spinner"></div>
+      <p>Waiting for you to link…</p>
+    </div>
+    <button class="btn btn-outline" onclick="resetFlow()">Try a different number</button>
+  </div>
+
+  <!-- Panel 4: Success -->
+  <div class="panel" id="panel-success">
+    <div class="success-box">
+      <div class="success-icon">🎉</div>
+      <h2>Bot Connected!</h2>
+      <p>Your TRUTH-MD bot is now running on</p>
+      <div class="success-num" id="success-num"></div>
+      <p>Check your WhatsApp — the bot sent you a welcome message.<br/><br/>
+         Send <strong style="color:var(--green)">.menu</strong> to see all 440+ commands!</p>
+      <button class="btn" style="margin-top:24px" onclick="resetFlow()">Connect Another Number</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- FEATURES -->
+<div class="features" id="features">
+  <div class="feat">
+    <div class="feat-icon">🤖</div>
+    <h3>AI Assistant</h3>
+    <p>Built-in ChatGPT-style AI for answering questions, generating images, and more.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">🎵</div>
+    <h3>Media Downloads</h3>
+    <p>Download songs, videos, TikToks, Instagram reels, YouTube videos and more.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">👥</div>
+    <h3>Group Management</h3>
+    <p>Anti-link, welcome messages, promote, demote, kick, tag all and more.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">🎨</div>
+    <h3>Stickers & Media</h3>
+    <p>Create stickers, edit images, generate memes, and convert media formats.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">⚡</div>
+    <h3>440+ Commands</h3>
+    <p>From games to utilities to fun — there's a command for almost everything.</p>
+  </div>
+  <div class="feat">
+    <div class="feat-icon">🔄</div>
+    <h3>Always Online</h3>
+    <p>Your bot runs 24/7 even when your phone is off. Never miss a message.</p>
+  </div>
+</div>
+
+<footer>
+  <strong style="color:var(--green)">TRUTH-MD</strong> v2.4.0 &nbsp;·&nbsp; Built for WhatsApp Automation
+</footer>
+
+<script>
+let currentPhone = '';
+let pollInterval = null;
+let codeTimeout = null;
+let codeStartTime = null;
+const CODE_TIMEOUT_MS = 3 * 60 * 1000;
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('sdot' + i);
+    const step = document.getElementById('dot' + i);
+    dot.classList.remove('active', 'done');
+    step.classList.remove('active');
+    if (i < n) { dot.classList.add('done'); dot.textContent = '✓'; }
+    else if (i === n) { dot.classList.add('active'); dot.textContent = i === 3 ? '✓' : i; step.classList.add('active'); }
+    else { dot.textContent = i === 3 ? '✓' : i; }
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('phone-error');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function clearError() {
+  document.getElementById('phone-error').classList.remove('show');
+}
+
+function clearPolling() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  if (codeTimeout) { clearTimeout(codeTimeout); codeTimeout = null; }
+}
+
+async function startPairing() {
+  clearError();
+  const input = document.getElementById('phone-input');
+  const phone = input.value.replace(/[^0-9]/g, '');
+  if (phone.length < 7) {
+    showError('Please enter a valid phone number with country code.');
+    return;
+  }
+  currentPhone = phone;
+  const btn = document.getElementById('btn-pair');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  try {
+    const res = await fetch('/api/users/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      showError(data.error || 'Failed to start. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Get My Bot →';
+      return;
+    }
+    if (data.alreadyConnected) {
+      showSuccessFor(phone);
+      return;
+    }
+    setStep(2);
+    showPanel('panel-wait-code');
+    pollForCode();
+  } catch (e) {
+    showError('Connection error. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Get My Bot →';
+  }
+}
+
+function pollForCode() {
+  clearPolling();
+  codeStartTime = Date.now();
+
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch('/api/users/pairing-code/' + currentPhone);
+      const data = await res.json();
+
+      if (data.connected) {
+        clearPolling();
+        showSuccessFor(currentPhone);
+        return;
+      }
+
+      if (data.code) {
+        clearPolling();
+        document.getElementById('pairing-code-text').textContent = data.code;
+        showPanel('panel-code');
+        startCodeTimer();
+        pollForConnection();
+        return;
+      }
+    } catch (_) {}
+
+    if (Date.now() - codeStartTime > CODE_TIMEOUT_MS) {
+      clearPolling();
+      showError('Timed out. Please try again.');
+      showPanel('panel-phone');
+      setStep(1);
+      document.getElementById('btn-pair').disabled = false;
+      document.getElementById('btn-pair').textContent = 'Get My Bot →';
+    }
+  }, 2000);
+}
+
+function startCodeTimer() {
+  const end = Date.now() + CODE_TIMEOUT_MS;
+  const el = document.getElementById('code-timer');
+  const tick = () => {
+    const rem = Math.max(0, Math.floor((end - Date.now()) / 1000));
+    const m = Math.floor(rem / 60), s = rem % 60;
+    el.textContent = `Code expires in ${m}:${s.toString().padStart(2,'0')}`;
+    if (rem > 0) codeTimeout = setTimeout(tick, 1000);
+  };
+  tick();
+}
+
+function pollForConnection() {
+  clearPolling();
+  const startTime = Date.now();
+
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await fetch('/api/users/status/' + currentPhone);
+      const data = await res.json();
+      if (data.status === 'connected') {
+        clearPolling();
+        showSuccessFor(currentPhone);
+        return;
+      }
+    } catch (_) {}
+
+    if (Date.now() - startTime > CODE_TIMEOUT_MS + 30000) {
+      clearPolling();
+    }
+  }, 3000);
+}
+
+function showSuccessFor(phone) {
+  const fmt = '+' + phone.slice(0, 3) + ' ' + phone.slice(3, 6) + ' ' + phone.slice(6);
+  document.getElementById('success-num').textContent = fmt;
+  setStep(3);
+  showPanel('panel-success');
+}
+
+function resetFlow() {
+  clearPolling();
+  currentPhone = '';
+  clearError();
+  const input = document.getElementById('phone-input');
+  input.value = '';
+  const btn = document.getElementById('btn-pair');
+  btn.disabled = false;
+  btn.textContent = 'Get My Bot →';
+  setStep(1);
+  showPanel('panel-phone');
+}
+
+document.getElementById('phone-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startPairing();
+});
+</script>
+</body>
+</html>

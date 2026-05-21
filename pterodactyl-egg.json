@@ -1,0 +1,83 @@
+{
+  "_comment": "DO NOT EDIT — export/import this file directly into Pterodactyl Admin → Nests → Import Egg",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2025-01-01T00:00:00+00:00",
+  "name": "TRUTH-MD WhatsApp Bot",
+  "author": "truth-md@courtneytech.xyz",
+  "description": "TRUTH-MD WhatsApp Bot powered by Baileys. Session-driven, no OWNER_NUMBER required. PostgreSQL sessions survive restarts.",
+  "features": ["eula"],
+  "docker_images": {
+    "Node.js 20": "ghcr.io/pterodactyl/yolks:nodejs_20",
+    "Node.js 18": "ghcr.io/pterodactyl/yolks:nodejs_18"
+  },
+  "file_denylist": [],
+  "startup": "bash start.sh",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\": \"TRUTH-MD\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\napt-get update -y\napt-get install -y git ffmpeg imagemagick webp curl\n\ncd /mnt/server\n\nif [ -d .git ]; then\n  echo 'Pulling latest code...'\n  git pull\nelse\n  echo 'Cloning TRUTH-MD...'\n  git clone https://github.com/Courtney250/TRUTH-MD.git .\nfi\n\necho 'Installing dependencies...'\nNODE_OPTIONS=\"--max-old-space-size=256\" npm install --legacy-peer-deps --prefer-offline --no-audit --no-fund\n\nchmod +x start.sh\necho 'Installation complete!'",
+      "container": "ghcr.io/pterodactyl/installers:debian",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "Session ID",
+      "description": "Your TRUTH-MD session ID. Get it from https://truth-md.courtneytech.xyz. Format: TRUTH-MD~xxxxxxx",
+      "env_variable": "SESSION_ID",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Database URL",
+      "description": "PostgreSQL connection string. Required for sessions to survive restarts. Format: postgresql://user:pass@host:5432/dbname",
+      "env_variable": "DATABASE_URL",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Node Environment",
+      "description": "Set to production for panels.",
+      "env_variable": "NODE_ENV",
+      "default_value": "production",
+      "user_viewable": true,
+      "user_editable": false,
+      "rules": "required|string|in:production,development",
+      "field_type": "text"
+    },
+    {
+      "name": "Owner Number (optional)",
+      "description": "Owner WhatsApp number with country code e.g. 254712345678. Only set this if you want to force-pair. Leave blank for session-based login.",
+      "env_variable": "OWNER_NUMBER",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string",
+      "field_type": "text"
+    },
+    {
+      "name": "Force Pair",
+      "description": "Set to true to request a new pairing code on next start. REMOVE after pairing is done.",
+      "env_variable": "FORCE_PAIR",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|in:true,false,",
+      "field_type": "text"
+    }
+  ]
+}
