@@ -1,147 +1,118 @@
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+const fetch = require("node-fetch");
+const fs = require("fs");
+const path = require("path");
 
-const TOKEN = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
-const OWNER = 'mzeeemzimanjejeje';
-const REPO  = 'Truthx-mini';
+const REPO_OWNER = "mzeeemzimanjejeje";
+const REPO_NAME = "Maintaining";
+const BRANCH = "main";
+const TOKEN = process.env.GITHUB_TOKEN;
 
-if (!TOKEN) { console.error('GITHUB_PERSONAL_ACCESS_TOKEN not set'); process.exit(1); }
-
-function ghRequest(method, endpoint, body) {
-    return new Promise((resolve, reject) => {
-        const data = body ? JSON.stringify(body) : null;
-        const req = https.request({
-            hostname: 'api.github.com',
-            path: endpoint,
-            method,
-            headers: {
-                'Authorization': `token ${TOKEN}`,
-                'Content-Type': 'application/json',
-                'User-Agent': 'TRUTH-MD-Bot',
-                'Accept': 'application/vnd.github.v3+json',
-                ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-            }
-        }, res => {
-            let raw = '';
-            res.on('data', c => raw += c);
-            res.on('end', () => { try { resolve(JSON.parse(raw)); } catch { resolve(raw); } });
-        });
-        req.on('error', reject);
-        if (data) req.write(data);
-        req.end();
-    });
+if (!TOKEN) {
+  console.error("❌ GITHUB_TOKEN not set");
+  process.exit(1);
 }
 
-const ROOT = path.resolve(__dirname, '..');
-const SKIP_DIRS  = new Set(['node_modules', '.git', 'tmp', 'temp', 'status_capture', 'baileys_store', '.cache', '.local', 'session', 'auth_info_baileys', 'attached_assets']);
-const SKIP_FILES = new Set(['.env', '.env.local', 'baileys_store.json', 'message_backup.json', 'session_id.hash', 'login.json', 'owner.json', 'sudo.json', 'premium.json', 'banned.json', 'lidmap.json', 'messageCount.json', 'antibadword.json', 'antiout.json', 'antipromote.json', 'state.json', 'userGroupData.json', 'groupTracker.json', 'payments.json', 'sessionErrorCount.json']);
-const SKIP_EXT   = new Set(['.log', '.zip', '.session', '.db', '.db-wal', '.db-shm']);
-
-function walkDir(dir, base) {
-    base = base || '';
-    const results = [];
-    let entries;
-    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-    for (const e of entries) {
-        if (e.name.startsWith('.') && e.isDirectory()) continue;
-        const rel  = base ? base + '/' + e.name : e.name;
-        const full = path.join(dir, e.name);
-        if (e.isDirectory()) {
-            if (SKIP_DIRS.has(e.name)) continue;
-            results.push.apply(results, walkDir(full, rel));
-        } else {
-            if (SKIP_FILES.has(e.name)) continue;
-            if (SKIP_EXT.has(path.extname(e.name))) continue;
-            if (e.name.includes('download')) continue;
-            results.push({ rel, full });
-        }
-    }
-    return results;
+async function ghApi(endpoint, options = {}) {
+  const method = options.method || "GET";
+  const url = `https://api.github.com${endpoint}`;
+  const headers = {
+    Authorization: `token ${TOKEN}`,
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "TRUTH-MD-Bot/1.0",
+  };
+  if (options.body) headers["Content-Type"] = "application/json";
+  const res = await fetch(url, {
+    method,
+    headers,
+    ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(`GitHub API error ${res.status}: ${JSON.stringify(json)}`);
+  }
+  return json;
 }
 
-async function pushAll() {
-    const files = walkDir(ROOT);
-    console.log(`Uploading ${files.length} files to github.com/${OWNER}/${REPO} ...`);
+function shouldInclude(filePath) {
+  const ignore = [
+    "node_modules", ".env", "session/", "sessions/", "auth_info_baileys/",
+    "tmp_pair_", "status_capture/", "temp/", "tmp/", ".git/", ".cache/",
+    ".upm/", ".local/", "attached_assets/", "baileys_store.json",
+    "message_backup.json", "error_counter.json", "sessionErrorCount.json",
+    ".puppeteerrc.cjs", "player-script.js", ".replit", "replit.nix",
+    "replit.md", ".breakpoints", "snippets/"
+  ];
+  for (const pattern of ignore) {
+    if (filePath.startsWith(pattern) || filePath.includes("/" + pattern)) return false;
+  }
+  if (filePath.startsWith("data/") && !filePath.startsWith("data/defaults/")) return false;
+  if (filePath.endsWith(".log") || filePath.endsWith(".bak")) return false;
+  return true;
+}
 
-    // Check if repo already has a main branch
-    let refCheck = await ghRequest('GET', `/repos/${OWNER}/${REPO}/git/refs/heads/main`);
-    let hasMain  = !refCheck.message;
-    let parentSha  = null;
-    let baseTree   = null;
-
-    // Seed empty repo with a stub file first (GitHub API blocks blobs on empty repos)
-    if (!hasMain) {
-        console.log('Seeding empty repo with initial commit...');
-        const seed = await ghRequest('PUT', `/repos/${OWNER}/${REPO}/contents/README.md`, {
-            message: 'chore: initial commit',
-            content: Buffer.from('# Truthx-mini\nMulti-user WhatsApp Bot Platform\n').toString('base64')
-        });
-        if (!seed.commit) { console.error('Seed failed:', JSON.stringify(seed).slice(0, 200)); process.exit(1); }
-        parentSha = seed.commit.sha;
-        baseTree  = seed.commit.tree.sha;
-        hasMain   = true;
-        console.log('Seed commit:', parentSha.slice(0, 7));
-    } else if (refCheck.object) {
-        parentSha = refCheck.object.sha;
-        const commit = await ghRequest('GET', `/repos/${OWNER}/${REPO}/git/commits/${parentSha}`);
-        baseTree = commit.tree ? commit.tree.sha : null;
-        console.log(`Updating existing branch on top of commit ${parentSha.slice(0, 7)}`);
-    }
-
-    // Upload blobs in small parallel batches
-    const treeItems = [];
-    let done = 0;
-    const BATCH = 8;
-
-    for (let i = 0; i < files.length; i += BATCH) {
-        const chunk = files.slice(i, i + BATCH);
-        await Promise.all(chunk.map(async ({ rel, full }) => {
-            try {
-                const raw = fs.readFileSync(full);
-                const b64 = raw.toString('base64');
-                const blob = await ghRequest('POST', `/repos/${OWNER}/${REPO}/git/blobs`, { content: b64, encoding: 'base64' });
-                if (blob.sha) {
-                    treeItems.push({ path: rel, mode: '100644', type: 'blob', sha: blob.sha });
-                } else {
-                    console.warn(`  Skipped ${rel}: ${blob.message || 'no sha'}`);
-                }
-            } catch (e) {
-                console.warn(`  Skipped ${rel}: ${e.message}`);
-            }
-        }));
-        done += chunk.length;
-        if (done % 40 === 0 || done >= files.length) process.stdout.write(`  ${done}/${files.length} blobs\r`);
-    }
-    console.log(`\n${treeItems.length} blobs ready. Creating tree...`);
-
-    const treeBody = { tree: treeItems };
-    if (baseTree) treeBody.base_tree = baseTree;
-    const tree = await ghRequest('POST', `/repos/${OWNER}/${REPO}/git/trees`, treeBody);
-    if (!tree.sha) { console.error('Tree failed:', JSON.stringify(tree).slice(0, 200)); process.exit(1); }
-    console.log('Tree SHA:', tree.sha.slice(0, 7));
-
-    const commitBody = {
-        message: 'feat: multi-user WhatsApp bot platform\n\n- lib/userAuthState.js — per-user PostgreSQL auth\n- lib/instanceManager.js — manage multiple WA connections\n- public/index.html — web pairing UI (no session ID needed)\n- index.js — multi-user API routes (/users, /api/users/*)',
-        tree: tree.sha,
-        parents: parentSha ? [parentSha] : []
-    };
-    const commit = await ghRequest('POST', `/repos/${OWNER}/${REPO}/git/commits`, commitBody);
-    if (!commit.sha) { console.error('Commit failed:', JSON.stringify(commit).slice(0, 200)); process.exit(1); }
-    console.log('Commit SHA:', commit.sha.slice(0, 7));
-
-    let branchRes;
-    if (hasMain) {
-        branchRes = await ghRequest('PATCH', `/repos/${OWNER}/${REPO}/git/refs/heads/main`, { sha: commit.sha, force: false });
+function getAllFiles(dir, base = "") {
+  const files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const rel = base ? `${base}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      if (["node_modules", ".git", ".cache", ".upm", ".local", "session", "sessions", "auth_info_baileys", "attached_assets"].includes(entry.name)) continue;
+      files.push(...getAllFiles(path.join(dir, entry.name), rel));
     } else {
-        branchRes = await ghRequest('POST', `/repos/${OWNER}/${REPO}/git/refs`, { ref: 'refs/heads/main', sha: commit.sha });
+      if (shouldInclude(rel)) files.push(rel);
     }
-
-    if (branchRes.ref || (branchRes.object && branchRes.object.sha)) {
-        console.log(`\nDone! https://github.com/${OWNER}/${REPO}`);
-    } else {
-        console.error('Branch update response:', JSON.stringify(branchRes).slice(0, 200));
-    }
+  }
+  return files;
 }
 
-pushAll().catch(e => { console.error('Fatal:', e.message); process.exit(1); });
+async function push() {
+  console.log(`Pushing to ${REPO_OWNER}/${REPO_NAME} (${BRANCH})...`);
+
+  const refData = await ghApi(`/repos/${REPO_OWNER}/${REPO_NAME}/git/ref/heads/${BRANCH}`);
+  const latestSha = refData.object.sha;
+  console.log(`Latest commit: ${latestSha.substring(0, 7)}`);
+
+  const files = getAllFiles(process.cwd());
+  console.log(`Files to push: ${files.length}`);
+
+  const treeItems = [];
+  for (const filePath of files) {
+    const fullPath = path.join(process.cwd(), filePath);
+    const content = fs.readFileSync(fullPath);
+    const isBinary = content.includes(0x00);
+
+    if (isBinary) {
+      const blobData = await ghApi(`/repos/${REPO_OWNER}/${REPO_NAME}/git/blobs`, {
+        method: "POST",
+        body: { content: content.toString("base64"), encoding: "base64" },
+      });
+      treeItems.push({ path: filePath, mode: "100644", type: "blob", sha: blobData.sha });
+    } else {
+      treeItems.push({ path: filePath, mode: "100644", type: "blob", content: content.toString("utf-8") });
+    }
+  }
+
+  console.log("Creating tree...");
+  const treeData = await ghApi(`/repos/${REPO_OWNER}/${REPO_NAME}/git/trees`, {
+    method: "POST",
+    body: { tree: treeItems, base_tree: latestSha },
+  });
+
+  const commitMsg = `Update TRUTH-MD bot - ${new Date().toISOString().split("T")[0]}`;
+  console.log(`Creating commit: ${commitMsg}`);
+  const commitData = await ghApi(`/repos/${REPO_OWNER}/${REPO_NAME}/git/commits`, {
+    method: "POST",
+    body: { message: commitMsg, tree: treeData.sha, parents: [latestSha] },
+  });
+
+  await ghApi(`/repos/${REPO_OWNER}/${REPO_NAME}/git/refs/heads/${BRANCH}`, {
+    method: "PATCH",
+    body: { sha: commitData.sha },
+  });
+
+  console.log(`✅ Pushed successfully! Commit: ${commitData.sha.substring(0, 7)}`);
+}
+
+push().catch((err) => {
+  console.error("❌ Push failed:", err.message);
+  process.exit(1);
+});

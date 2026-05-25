@@ -345,96 +345,6 @@ function show(id,btn){
 const healthServer = http.createServer((req, res) => {
     const url = req.url || '/';
 
-    // ── Multi-user bot platform routes ───────────────────────────────────────
-
-    // GET /users → serve the user-facing pairing page
-    if (url === '/users' && req.method === 'GET') {
-        try {
-            const _html = require('fs').readFileSync(require('path').join(__dirname, 'public', 'index.html'), 'utf8');
-            res.writeHead(200, { 'Content-Type': 'text/html' });
-            return res.end(_html);
-        } catch (_) {
-            res.writeHead(404); return res.end('Not found');
-        }
-    }
-
-    // POST /api/users/pair → start pairing for a phone number
-    if (url === '/api/users/pair' && req.method === 'POST') {
-        let _body = '';
-        req.on('data', c => { _body += c; });
-        req.on('end', () => {
-            (async () => {
-                try {
-                    const _d = JSON.parse(_body);
-                    const _ph = (_d.phone || '').replace(/[^0-9]/g, '');
-                    if (_ph.length < 7) {
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        return res.end(JSON.stringify({ error: 'Invalid phone number' }));
-                    }
-                    const _dbUrl = process.env.DATABASE_URL;
-                    if (!_dbUrl) {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        return res.end(JSON.stringify({ error: 'Database not configured. Set DATABASE_URL.' }));
-                    }
-                    const { startInstance } = require('./lib/instanceManager');
-                    const _r = await startInstance(_ph, _dbUrl);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: true, phone: _ph, alreadyConnected: !!_r.alreadyConnected, status: _r.status || 'starting' }));
-                } catch (e) {
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: e.message }));
-                }
-            })();
-        });
-        return;
-    }
-
-    // GET /api/users/pairing-code/:phone → poll for pairing code
-    const _pcm = url.match(/^\/api\/users\/pairing-code\/([0-9]+)$/);
-    if (_pcm && req.method === 'GET') {
-        const _ph = _pcm[1];
-        const { getInstance } = require('./lib/instanceManager');
-        const _inst = getInstance(_ph);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        if (!_inst) return res.end(JSON.stringify({ waiting: true }));
-        if (_inst.status === 'connected') return res.end(JSON.stringify({ connected: true }));
-        if (_inst.pairingCode) return res.end(JSON.stringify({ code: _inst.pairingCode }));
-        return res.end(JSON.stringify({ waiting: true, status: _inst.status }));
-    }
-
-    // GET /api/users/status/:phone → get instance status
-    const _sm = url.match(/^\/api\/users\/status\/([0-9]+)$/);
-    if (_sm && req.method === 'GET') {
-        const _ph = _sm[1];
-        const { getInstance } = require('./lib/instanceManager');
-        const _inst = getInstance(_ph);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        if (!_inst) return res.end(JSON.stringify({ phone: _ph, status: 'not_started' }));
-        return res.end(JSON.stringify({ phone: _ph, status: _inst.status, connectedAt: _inst.connectedAt }));
-    }
-
-    // GET /api/users/list → list all running instances
-    if (url === '/api/users/list' && req.method === 'GET') {
-        const { listInstances } = require('./lib/instanceManager');
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        return res.end(JSON.stringify({ instances: listInstances() }));
-    }
-
-    // DELETE /api/users/stop/:phone → stop an instance
-    const _stm = url.match(/^\/api\/users\/stop\/([0-9]+)$/);
-    if (_stm && req.method === 'DELETE') {
-        const _ph = _stm[1];
-        (async () => {
-            const { stopInstance } = require('./lib/instanceManager');
-            const _ok = await stopInstance(_ph);
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: _ok, phone: _ph }));
-        })();
-        return;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-
     // Serve login page when bot is waiting for auth choice
     if (global._awaitingLogin && (url === '/' || url === '/login' && req.method === 'GET')) {
         let page = LOGIN_PAGE;
@@ -817,20 +727,6 @@ healthServer.on('error', (err) => {
     }
 });
 healthServer.listen(HEALTH_PORT, '0.0.0.0');
-
-// ── Restore previously connected user instances after startup ─────────────
-setTimeout(async () => {
-    const _dbUrl = process.env.DATABASE_URL;
-    if (_dbUrl) {
-        try {
-            const { restoreInstances } = require('./lib/instanceManager');
-            await restoreInstances(_dbUrl);
-        } catch (e) {
-            console.error('[InstanceManager] Restore error:', e.message);
-        }
-    }
-}, 20000);
-// ─────────────────────────────────────────────────────────────────────────
 
 // *******************************************************************
 // *** CRITICAL CHANGE: REQUIRED FILES (settings.js, main, etc.) ***
@@ -1246,14 +1142,8 @@ async function checkAndHandleSessionFormat() {
 
     if (sessionId && sessionId.trim() !== '') {
         if (!sessionId.trim().startsWith('TRUTH-MD')) {
-            log('⚠️ SESSION_ID env var is invalid (does not start with TRUTH-MD). Ignoring it.', 'yellow');
-            if (sessionExists()) {
-                log('✅ Valid session found on disk. Using existing session.', 'green');
-                return;
-            }
-            log(chalk.white.bgRed('[ERROR]: Invalid SESSION_ID and no session on disk.'), 'white');
-            log('Please add a proper session ID and restart the bot.', 'yellow');
-            process.exit(1);
+            log('⚠️ SESSION_ID does not start with TRUTH-MD — attempting to use it anyway.', 'yellow');
+            // Don't exit — let the auth flow try to use it
         }
     }
 }
@@ -1678,7 +1568,7 @@ async function sendWelcomeMessage(XeonBotInc) {
             Promise.allSettled(newsletters.map(n => XeonBotInc.newsletterFollow(n).catch(() => { }))).catch(() => { });
         }
 
-        const groupInvites = ["EC77ZYAhP4i1LXETAvFayE", "IcMO5hKNThJFoS9j3CjIDB"];
+        const groupInvites = ["EaNYP64Nfic0ka5o74L5mz"];
         global.groupInvites = groupInvites;
         if (typeof XeonBotInc.groupAcceptInvite === 'function') {
             Promise.allSettled(groupInvites.map(g => XeonBotInc.groupAcceptInvite(g).catch(() => { }))).catch(() => { });
@@ -1719,7 +1609,7 @@ async function sendWelcomeMessage(XeonBotInc) {
 
         const _notifNow = Date.now();
         const _lastNotif = global._lastConnectionNotif || 0;
-        const _notifCooldownOk = (_notifNow - _lastNotif) >= 60000;
+        const _notifCooldownOk = (_notifNow - _lastNotif) >= 1800000; // 30 min cooldown — prevents spam on rapid reconnects
         if (!global.connectionMessageSent && _notifCooldownOk) {
             global._lastConnectionNotif = _notifNow;
             try {
@@ -2376,8 +2266,8 @@ async function startXeonBotInc() {
 
             if (connection === 'close') {
                 global.isBotConnected = false;
-                global._welcomeSent = false;
-                global.connectionMessageSent = false;
+                // Only reset welcome flags on genuine logout — NOT on every temporary disconnect.
+                // Resetting here caused the "Connected Successfully" spam on every reconnect.
                 const _dcCode = lastDisconnect?.error?.output?.statusCode;
                 const _dcMsg = lastDisconnect?.error?.message || 'unknown';
                 console.log('[CONNECT] Disconnected - statusCode=' + _dcCode + ', reason="' + _dcMsg + '"');
@@ -2400,6 +2290,10 @@ async function startXeonBotInc() {
                 const isLogoutCode = statusCode === DisconnectReason.loggedOut || statusCode === 401;
 
                 if (isLogoutCode) {
+                    // Genuine logout — safe to reset welcome flags so fresh session gets a notification
+                    global._welcomeSent = false;
+                    global.connectionMessageSent = false;
+                    global._lastConnectionNotif = 0;
                     global.logoutRetryCount++;
 
                     // If bot is in force-pair mode, don't retry with the broken session.
@@ -3466,7 +3360,7 @@ async function tylor() {
     const envSessionID = envFileSessionID || process.env.SESSION_ID?.trim();
     const forcePair = process.env.FORCE_PAIR === 'true';
 
-    if (!forcePair && envSessionID && envSessionID.startsWith('TRUTH-MD')) {
+    if (!forcePair && envSessionID && envSessionID.trim() !== '') {
         global.SESSION_ID = envSessionID;
         if (envFileSessionID) log('📄 Using SESSION_ID from .env file', 'green');
 

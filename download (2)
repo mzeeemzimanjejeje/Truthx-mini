@@ -1,0 +1,6 @@
+legacy-peer-deps=true
+prefer-offline=true
+loglevel=warn
+progress=false
+fund=false
+audit=false
