@@ -1,32 +1,27 @@
 {
   "name": "TRUTH-MD Pair Web",
-  "description": "Multi-session WhatsApp bot — users pair their number and get the bot connected instantly. No session ID needed.",
+  "description": "Multi-session WhatsApp bot. Users visit the site, enter their number, get a pairing code — bot connects instantly. No session ID needed.",
   "repository": "https://github.com/mzeeemzimanjejeje/Truthx-mini",
-  "logo": "https://raw.githubusercontent.com/mzeeemzimanjejeje/Truthx-mini/main/assets/menu.jpg",
   "keywords": [
     "whatsapp",
     "bot",
     "baileys",
-    "node",
-    "pair"
+    "node"
   ],
   "env": {
-    "DATABASE_URL": {
-      "description": "PostgreSQL connection URL for session persistence. Add the Heroku Postgres add-on — it sets this automatically.",
-      "required": true
-    },
-    "OWNER_NUMBER": {
-      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567)",
-      "required": true
-    },
     "BOT_NAME": {
-      "description": "Display name for the bot",
+      "description": "Display name shown by the bot",
       "value": "TRUTH-MD",
       "required": false
     },
     "PREFIX": {
-      "description": "Command prefix (default: .)",
+      "description": "Command prefix (e.g. . or !)",
       "value": ".",
+      "required": false
+    },
+    "OWNER_NUMBER": {
+      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567). Optional — bot works for all paired users without this.",
+      "value": "",
       "required": false
     }
   },
