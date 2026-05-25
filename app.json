@@ -1,40 +1,39 @@
 {
-  "name": "TRUTH-MD",
-  "description": "A WhatsApp bot built with Node.js using the Baileys library.",
-  "repository": "https://github.com/Courtney250/TRUTH-MD",
-  "logo": "https://raw.githubusercontent.com/Courtney250/TRUTH-MD/main/asset/menu.jpg",
-  "keywords": ["whatsapp", "bot", "baileys", "node"],
+  "name": "TRUTH-MD Pair Web",
+  "description": "Multi-session WhatsApp bot — users pair their number and get the bot connected instantly. No session ID needed.",
+  "repository": "https://github.com/mzeeemzimanjejeje/Truthx-mini",
+  "logo": "https://raw.githubusercontent.com/mzeeemzimanjejeje/Truthx-mini/main/assets/menu.jpg",
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "node",
+    "pair"
+  ],
   "env": {
-    "SESSION_ID": {
-      "description": "Your WhatsApp session ID (must start with TRUTH-MD:~). Get one at truthsite.courtneytech.xyz",
-      "required": true
-    },
     "DATABASE_URL": {
-      "description": "PostgreSQL connection URL. Used for session persistence across dyno restarts. Add the Heroku Postgres add-on.",
+      "description": "PostgreSQL connection URL for session persistence. Add the Heroku Postgres add-on — it sets this automatically.",
       "required": true
     },
     "OWNER_NUMBER": {
-      "description": "Your WhatsApp number with country code, no + (e.g. 254101150748)",
-      "required": false,
-      "value": "254101150748"
+      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567)",
+      "required": true
     },
-    "APP_URL": {
-      "description": "Your Heroku app URL (e.g. https://my-truth-md.herokuapp.com). Used for self-ping to prevent eco dyno sleep. Optional — bot still works without it.",
+    "BOT_NAME": {
+      "description": "Display name for the bot",
+      "value": "TRUTH-MD",
       "required": false
     },
-    "HEROKU_APP_NAME": {
-      "description": "Your Heroku app name (e.g. my-truth-md). Used as fallback for self-ping if APP_URL is not set. Optional.",
-      "required": false
-    },
-    "GITHUB_TOKEN": {
-      "description": "Optional. Only needed if you have replaced the relay with a direct private GitHub repo. Leave blank for standard deployments.",
+    "PREFIX": {
+      "description": "Command prefix (default: .)",
+      "value": ".",
       "required": false
     }
   },
   "formation": {
-    "worker": {
+    "web": {
       "quantity": 1,
-      "size": "basic"
+      "size": "eco"
     }
   },
   "addons": [
@@ -45,12 +44,6 @@
   "buildpacks": [
     {
       "url": "heroku/nodejs"
-    },
-    {
-      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest"
-    },
-    {
-      "url": "https://github.com/jontewks/puppeteer-heroku-buildpack"
     }
   ]
 }
