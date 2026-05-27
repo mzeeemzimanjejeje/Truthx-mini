@@ -5,7 +5,7 @@
       "src": "server.js",
       "use": "@vercel/node",
       "config": {
-        "maxLambdaSize": "50mb",
+        "includeFiles": ["public/**", "lib/SessionManager.js"],
         "maxDuration": 60
       }
     }
