@@ -29,6 +29,11 @@ function getSessionManager() {
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── /pair  (serve the pairing website) ────────────────────────────────────
+app.get('/pair', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // ── Health ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -138,4 +143,5 @@ if (require.main === module) {
 process.on('uncaughtException', err => console.error('[UNCAUGHT]', err.message));
 process.on('unhandledRejection', err => console.error('[REJECTION]', err?.message || err));
 
-module.exports = server;
+// Vercel expects the Express app, not the raw http.Server
+module.exports = app;
