@@ -16,7 +16,7 @@ header{background:#111b21;border-bottom:1px solid #2a3942;padding:12px 20px;disp
 .stats{display:flex;gap:16px;font-size:12px;color:#8696a0}
 .stat{display:flex;align-items:center;gap:5px}
 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.dot-green{background:#00a884} .dot-blue{background:#60a5fa} .dot-gray{background:#8696a0}
+.dot-green{background:#00a884} .dot-blue{background:#60a5fa}
 main{max-width:960px;margin:0 auto;padding:24px 16px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
 @media(max-width:640px){main{grid-template-columns:1fr}}
 .card{background:#1f2c34;border:1px solid #2a3942;border-radius:16px;padding:22px}
@@ -31,8 +31,9 @@ input::placeholder{color:#8696a0}
 .btn:hover{background:#008069}
 .btn:active{transform:scale(.98)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-red{background:#ef4444}
-.btn-red:hover{background:#dc2626}
+/* Spinner inside button */
+.btn-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
 /* Pairing code */
 #code-area{display:none}
 .code-label{font-size:11px;font-weight:600;color:#8696a0;letter-spacing:.5px;text-align:center;margin-bottom:12px}
@@ -52,13 +53,11 @@ input::placeholder{color:#8696a0}
 .badge-waiting{background:rgba(96,165,250,.15);color:#60a5fa;border:1px solid rgba(96,165,250,.3)}
 .badge-connected{background:rgba(0,168,132,.15);color:#00a884;border:1px solid rgba(0,168,132,.3)}
 .badge-error{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
-.badge-reconnecting{background:rgba(234,179,8,.15);color:#eab308;border:1px solid rgba(234,179,8,.3)}
 /* Sessions panel */
 .sessions-list{display:flex;flex-direction:column;gap:10px;max-height:300px;overflow-y:auto}
 .session-item{background:#111b21;border:1px solid #2a3942;border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between}
 .session-info{flex:1}
 .session-name{font-size:14px;font-weight:600}
-.session-phone{font-size:12px;color:#8696a0}
 .session-actions button{background:#2a3942;color:#8696a0;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .2s}
 .session-actions button:hover{background:#ef4444;color:#fff}
 .no-sessions{text-align:center;color:#8696a0;font-size:13px;padding:24px 0}
@@ -120,7 +119,7 @@ footer{text-align:center;color:#8696a0;font-size:12px;padding:20px;border-top:1p
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
-        <span id="session-status-badge" class="badge badge-waiting">⏳ Waiting…</span>
+        <span id="session-status-badge" class="badge badge-waiting">📱 Enter code in WhatsApp…</span>
         <button class="copy-btn" onclick="resetForm()" style="margin:0">← Try again</button>
       </div>
     </div>
@@ -145,61 +144,119 @@ footer{text-align:center;color:#8696a0;font-size:12px;padding:20px;border-top:1p
 <footer>TRUTH-MD Pair Web v1.0.0 · For authorized use only</footer>
 <div class="toast" id="toast"></div>
 
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io();
 let currentCode = '';
 let currentSessionId = null;
 let sessionStatuses = {};
+let statusPollTimer = null;
 
-// Real-time events
-socket.on('sessions', renderSessions);
-socket.on('session_update', (s) => {
-  sessionStatuses[s.id] = s;
-  renderSessions(Object.values(sessionStatuses));
-  if (s.id === currentSessionId) updateStatusBadge(s.status);
-  if (s.status === 'connected' && s.id === currentSessionId) {
-    showToast('✅ Bot connected! It\'s now active on WhatsApp.', 'success');
+// ── Try to connect socket.io (works on persistent servers; ignored on serverless) ──
+let socket = null;
+try {
+  const s = window.io ? window.io() : null;
+  if (s) {
+    socket = s;
+    socket.on('sessions', renderSessions);
+    socket.on('session_update', (upd) => {
+      sessionStatuses[upd.id] = upd;
+      renderSessions(Object.values(sessionStatuses));
+      if (upd.id === currentSessionId) onStatusChange(upd.status, upd.name);
+    });
+    socket.on('log', ({ msg }) => addLog(msg));
   }
-});
-socket.on('pairing_code', ({ sessionId, code }) => {
-  if (sessionId === currentSessionId) {
-    showCode(code);
-  }
-});
-socket.on('log', ({ msg }) => addLog(msg));
+} catch (_) {}
 
-// Fetch initial sessions
+// Load socket.io script lazily — don't block page if it fails
+(function() {
+  const script = document.createElement('script');
+  script.src = '/socket.io/socket.io.js';
+  script.onload = () => {
+    try {
+      socket = window.io();
+      socket.on('sessions', renderSessions);
+      socket.on('session_update', (upd) => {
+        sessionStatuses[upd.id] = upd;
+        renderSessions(Object.values(sessionStatuses));
+        if (upd.id === currentSessionId) onStatusChange(upd.status, upd.name);
+      });
+      socket.on('log', ({ msg }) => addLog(msg));
+    } catch (_) {}
+  };
+  document.head.appendChild(script);
+})();
+
+// Fetch initial sessions list
 fetch('/api/sessions').then(r => r.json()).then(data => {
   data.forEach(s => { sessionStatuses[s.id] = s; });
   renderSessions(data);
 }).catch(() => {});
 
+// ── Pairing ───────────────────────────────────────────────────────────────────
 async function startPairing() {
   const phone = document.getElementById('phone-input').value.replace(/[^0-9]/g, '');
   if (phone.length < 7) return showToast('Enter a valid phone number with country code', 'error');
 
   const btn = document.getElementById('pair-btn');
   btn.disabled = true;
-  btn.textContent = 'Initializing…';
+  btn.innerHTML = '<span class="btn-spinner"></span>Connecting to WhatsApp…';
 
   try {
+    // API now waits and returns the code directly — no socket.io needed
     const r = await fetch('/api/pair', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone })
     });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Failed');
+    if (!r.ok) throw new Error(data.error || 'Failed to generate pairing code');
+
     currentSessionId = data.sessionId;
-    showToast('Generating pairing code…', 'success');
+
+    // Show code immediately from the API response
     document.getElementById('form-area').style.display = 'none';
     document.getElementById('code-area').style.display = 'block';
-    updateStatusBadge('pending');
+    showCode(data.code);
+    showToast('Code ready — enter it in WhatsApp!', 'success');
+
+    // Start polling for connection status
+    startStatusPolling();
+
   } catch (err) {
     showToast(err.message, 'error');
     btn.disabled = false;
     btn.textContent = 'Generate Pairing Code';
+  }
+}
+
+function startStatusPolling() {
+  stopStatusPolling();
+  statusPollTimer = setInterval(async () => {
+    if (!currentSessionId) return stopStatusPolling();
+    try {
+      const r = await fetch(`/api/pair-status/${currentSessionId}`);
+      const data = await r.json();
+      onStatusChange(data.status, data.name);
+    } catch (_) {}
+  }, 3000);
+}
+
+function stopStatusPolling() {
+  if (statusPollTimer) { clearInterval(statusPollTimer); statusPollTimer = null; }
+}
+
+function onStatusChange(status, name) {
+  updateStatusBadge(status, name);
+  if (status === 'connected') {
+    showToast('✅ Bot connected! It\'s now active on WhatsApp.', 'success');
+    stopStatusPolling();
+    // Refresh sessions list
+    fetch('/api/sessions').then(r => r.json()).then(data => {
+      data.forEach(s => { sessionStatuses[s.id] = s; });
+      renderSessions(data);
+    }).catch(() => {});
+  }
+  if (status === 'disconnected' || status === 'error') {
+    stopStatusPolling();
   }
 }
 
@@ -211,7 +268,6 @@ function showCode(code) {
     <div class="code-group">${p.split('').map(c => `<div class="code-char">${c}</div>`).join('')}</div>
     ${i < parts.length - 1 ? '<div class="code-sep">—</div>' : ''}
   `).join('');
-  updateStatusBadge('awaiting_scan');
 }
 
 function copyCode() {
@@ -220,6 +276,7 @@ function copyCode() {
 }
 
 function resetForm() {
+  stopStatusPolling();
   currentSessionId = null;
   currentCode = '';
   document.getElementById('code-display').innerHTML = '';
@@ -231,26 +288,26 @@ function resetForm() {
   btn.textContent = 'Generate Pairing Code';
 }
 
-function updateStatusBadge(status) {
+function updateStatusBadge(status, name) {
   const badge = document.getElementById('session-status-badge');
   const map = {
-    pending: ['badge-pending', '⏳ Initializing…'],
-    awaiting_scan: ['badge-waiting', '📱 Waiting for scan…'],
-    connected: ['badge-connected', '✅ Bot Connected!'],
-    reconnecting: ['badge-reconnecting', '🔄 Reconnecting…'],
-    error: ['badge-error', '❌ Error'],
-    disconnected: ['badge-error', '❌ Disconnected']
+    pending:       ['badge-pending',  '⏳ Initializing…'],
+    awaiting_scan: ['badge-waiting',  '📱 Enter code in WhatsApp…'],
+    connected:     ['badge-connected','✅ Bot Connected' + (name ? ` as ${name}` : '') + '!'],
+    error:         ['badge-error',    '❌ Error — try again'],
+    disconnected:  ['badge-error',    '❌ Disconnected — try again']
   };
-  const [cls, txt] = map[status] || map.pending;
+  const [cls, txt] = map[status] || map.awaiting_scan;
   badge.className = 'badge ' + cls;
   badge.textContent = txt;
 }
 
+// ── Sessions panel ─────────────────────────────────────────────────────────────
 function renderSessions(list) {
   const el = document.getElementById('sessions-list');
-  const active = list.filter(s => s.status === 'connected' || s.status === 'reconnecting');
+  const active  = list.filter(s => s.status === 'connected');
   const pairing = list.filter(s => s.status === 'awaiting_scan' || s.status === 'pending');
-  document.getElementById('stat-active').textContent = active.length + ' active';
+  document.getElementById('stat-active').textContent  = active.length  + ' active';
   document.getElementById('stat-pairing').textContent = pairing.length + ' pairing';
 
   if (!list.length) { el.innerHTML = '<div class="no-sessions">No active sessions yet</div>'; return; }
@@ -259,19 +316,19 @@ function renderSessions(list) {
       <div class="session-info">
         <div class="session-name">${s.name || '+' + s.phone}</div>
         <div class="session-phone" style="margin-top:3px">
-          <span class="badge badge-${s.status === 'connected' ? 'connected' : s.status === 'awaiting_scan' ? 'waiting' : 'pending'}" style="font-size:10px;padding:2px 7px">
-            ${s.status === 'connected' ? '🟢 Active' : s.status === 'awaiting_scan' ? '⏳ Pairing' : s.status === 'reconnecting' ? '🔄 Reconnecting' : s.status}
+          <span class="badge badge-${s.status === 'connected' ? 'connected' : 'waiting'}" style="font-size:10px;padding:2px 7px">
+            ${s.status === 'connected' ? '🟢 Active' : '⏳ Pairing'}
           </span>
         </div>
       </div>
       <div class="session-actions">
-        <button onclick="disconnect('${s.id}')">Disconnect</button>
+        <button onclick="disconnectSession('${s.id}')">Disconnect</button>
       </div>
     </div>
   `).join('');
 }
 
-async function disconnect(sessionId) {
+async function disconnectSession(sessionId) {
   if (!confirm('Disconnect this session?')) return;
   await fetch('/api/disconnect', {
     method: 'POST',
@@ -283,6 +340,7 @@ async function disconnect(sessionId) {
   showToast('Session disconnected', 'success');
 }
 
+// ── Logs ───────────────────────────────────────────────────────────────────────
 function addLog(msg) {
   const panel = document.getElementById('logs-panel');
   if (panel.querySelector('p')) panel.innerHTML = '';
@@ -293,11 +351,12 @@ function addLog(msg) {
   while (panel.children.length > 50) panel.removeChild(panel.lastChild);
 }
 
+// ── Toast ──────────────────────────────────────────────────────────────────────
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show ' + (type || '');
-  setTimeout(() => { t.className = 'toast'; }, 3000);
+  setTimeout(() => { t.className = 'toast'; }, 3500);
 }
 </script>
 </body>
