@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const app = express();
 const server = http.createServer(app);
 
-// Use polling + websocket; polling works in Vercel serverless, websocket in persistent envs
+// polling works in Vercel serverless; websocket works in persistent envs
 const io = new Server(server, {
   cors: { origin: '*' },
   transports: ['polling', 'websocket'],
@@ -17,7 +17,7 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 
-// Lazy-load SessionManager so a module-load crash doesn't take down the whole server
+// Lazy-load SessionManager so a bad import never kills the web server
 let sm = null;
 function getSessionManager() {
   if (!sm) {
@@ -30,15 +30,13 @@ function getSessionManager() {
         createSession: async () => { throw new Error('Session backend unavailable: ' + err.message); },
         destroySession: async () => {},
         allSessions: () => [],
-        setIO: () => {},
-        restoreSessions: async () => {}
+        setIO: () => {}
       };
     }
   }
   return sm;
 }
 
-// Pre-load on startup (non-blocking)
 try { getSessionManager(); } catch (_) {}
 
 app.use(express.json());
@@ -46,8 +44,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check
 app.get('/api/health', (req, res) => {
-  const sessions = getSessionManager().allSessions();
-  res.json({ status: 'ok', sessions: sessions.length, env: process.env.VERCEL ? 'vercel' : 'standalone' });
+  res.json({ status: 'ok', sessions: getSessionManager().allSessions().length, env: process.env.VERCEL ? 'vercel' : 'standalone' });
 });
 
 // API: start pairing
@@ -92,16 +89,10 @@ if (require.main === module) {
     console.log(`║  TRUTH-MD Pair Web v1.0.0  ║`);
     console.log(`║  Running on port ${PORT}        ║`);
     console.log(`╚════════════════════════════╝\n`);
-    getSessionManager().restoreSessions().catch(err => console.error('[RESTORE]', err.message));
   });
-} else {
-  // Serverless cold start: attempt session restore into /tmp (best effort, non-blocking)
-  getSessionManager().restoreSessions().catch(() => {});
 }
 
-// Anti-crash
 process.on('uncaughtException', err => console.error('[UNCAUGHT]', err.message));
 process.on('unhandledRejection', err => console.error('[REJECTION]', err?.message || err));
 
-// Export for Vercel serverless
 module.exports = server;
