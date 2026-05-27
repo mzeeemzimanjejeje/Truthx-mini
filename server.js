@@ -8,7 +8,14 @@ const { createSession, destroySession, allSessions, setIO, restoreSessions } = r
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+
+// Use polling transport for Vercel serverless compatibility
+const io = new Server(server, {
+  cors: { origin: '*' },
+  transports: ['polling', 'websocket'],
+  allowEIO3: true
+});
+
 const PORT = process.env.PORT || 3000;
 
 setIO(io);
@@ -47,22 +54,35 @@ app.get('/api/sessions', (req, res) => {
   res.json(allSessions());
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', sessions: allSessions().length });
+});
+
 // Socket.io — send current state on connect
 io.on('connection', (socket) => {
   socket.emit('sessions', allSessions());
 });
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`\n╔════════════════════════════╗`);
-  console.log(`║  TRUTH-MD Pair Web v1.0.0  ║`);
-  console.log(`║  Running on port ${PORT}        ║`);
-  console.log(`╚════════════════════════════╝\n`);
+// Only bind the port when running directly (not via Vercel serverless)
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`\n╔════════════════════════════╗`);
+    console.log(`║  TRUTH-MD Pair Web v1.0.0  ║`);
+    console.log(`║  Running on port ${PORT}        ║`);
+    console.log(`╚════════════════════════════╝\n`);
 
-  // Restore any saved sessions from previous run
-  restoreSessions().catch(err => console.error('[RESTORE]', err.message));
-});
+    // Restore any saved sessions from previous run
+    restoreSessions().catch(err => console.error('[RESTORE]', err.message));
+  });
+} else {
+  // Vercel serverless: restore sessions on cold start (best effort)
+  restoreSessions().catch(() => {});
+}
 
 // Anti-crash
 process.on('uncaughtException', err => console.error('[UNCAUGHT]', err.message));
 process.on('unhandledRejection', err => console.error('[REJECTION]', err?.message || err));
+
+// Export for Vercel serverless
+module.exports = server;
