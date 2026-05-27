@@ -1,92 +1,123 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-
-const io = new Server(server, {
-  cors: { origin: '*' },
-  transports: ['polling', 'websocket'],
-  allowEIO3: true
-});
-
 const PORT = process.env.PORT || 3000;
 
-// Lazy-load SessionManager — a bad import never kills the web server
-let sm = null;
+// ── Lazy-load SessionManager ───────────────────────────────────────────────
+let _sm = null;
 function getSessionManager() {
-  if (!sm) {
+  if (!_sm) {
     try {
-      sm = require('./lib/SessionManager');
-      sm.setIO(io);
+      _sm = require('./lib/SessionManager');
     } catch (err) {
       console.error('[SERVER] SessionManager load error:', err.message);
-      sm = {
+      _sm = {
         startPairing: async () => { throw new Error('Session backend unavailable: ' + err.message); },
         destroySession: async () => {},
         allSessions: () => [],
-        getSession: () => null,
-        setIO: () => {}
+        getSession: () => null
       };
     }
   }
-  return sm;
+  return _sm;
 }
-
-try { getSessionManager(); } catch (_) {}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Health ────────────────────────────────────────────────────────────────────
+// ── Health ─────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     sessions: getSessionManager().allSessions().length,
-    env: process.env.VERCEL ? 'vercel' : 'standalone'
+    env: process.env.VERCEL ? 'vercel' : 'standalone',
+    uptime: process.uptime()
   });
 });
 
-// ── Pair ─────────────────────────────────────────────────────────────────────
-// Waits until the pairing code is ready, then returns {sessionId, code}.
-// The browser shows the code directly — no socket.io needed for this step.
-app.post('/api/pair', async (req, res) => {
-  const { phone } = req.body || {};
-  if (!phone) return res.status(400).json({ error: 'Phone number required' });
+app.get('/uptime', (req, res) => {
+  res.json({
+    uptime: formatUptime(process.uptime() * 1000),
+    startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString()
+  });
+});
 
-  const cleaned = phone.replace(/[^0-9]/g, '');
-  if (cleaned.length < 7 || cleaned.length > 15)
+function formatUptime(ms) {
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600),
+        m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return `${d}d ${h}h ${m}m ${sec}s`;
+}
+
+// ── /code  (SSE — matches the working reference site pattern) ─────────────
+// GET /code?number=PHONE
+// Emits: event:code → {code, sessionId}
+//        event:session → {sessionId} (when WhatsApp connects)
+//        event:error → {message}
+app.get('/code', async (req, res) => {
+  const number = (req.query.number || '').replace(/\D/g, '');
+  if (!number || number.length < 7 || number.length > 15) {
     return res.status(400).json({ error: 'Invalid phone number' });
+  }
+
+  // SSE setup
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  res.write(': connected\n\n');
+
+  let closed = false;
+  function send(event, data) {
+    if (closed) return;
+    try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch (_) {}
+  }
+
+  req.on('close', () => { closed = true; });
+
+  // Heartbeat so Vercel / proxies don't kill the connection before the code arrives
+  const hb = setInterval(() => { if (!closed) try { res.write(': heartbeat\n\n'); } catch(_) {} }, 10000);
 
   try {
-    const { sessionId, code } = await getSessionManager().startPairing(cleaned);
-    res.json({ sessionId, code, message: 'Pairing started' });
+    const sm = getSessionManager();
+    // startPairing resolves with {sessionId, code} when pairing code is ready,
+    // and fires the onConnect callback when WhatsApp goes online.
+    const { sessionId, code } = await sm.startPairing(number, (event, data) => {
+      send(event, data);
+      if (event === 'session' || event === 'error') {
+        clearInterval(hb);
+        try { res.end(); } catch (_) {}
+        closed = true;
+      }
+    });
+    send('code', { code, sessionId });
   } catch (err) {
-    console.error('[PAIR] Error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to generate pairing code' });
+    console.error('[CODE] Error:', err.message);
+    send('error', { message: err.message || 'Failed to generate pairing code' });
+    clearInterval(hb);
+    try { res.end(); } catch (_) {}
   }
 });
 
-// ── Status polling (browser polls this every 3s after getting the code) ──────
-app.get('/api/pair-status/:sessionId', (req, res) => {
-  const info = getSessionManager().getSession(req.params.sessionId);
-  if (!info) return res.json({ status: 'disconnected' });
-  res.json({
-    status: info.status,
-    name: info.name || null,
-    connectedAt: info.connectedAt || null
-  });
-});
-
-// ── Sessions list ─────────────────────────────────────────────────────────────
+// ── Sessions list ──────────────────────────────────────────────────────────
 app.get('/api/sessions', (req, res) => {
   res.json(getSessionManager().allSessions());
 });
 
-// ── Disconnect ────────────────────────────────────────────────────────────────
+// ── Session status (polling fallback) ─────────────────────────────────────
+app.get('/api/pair-status/:sessionId', (req, res) => {
+  const info = getSessionManager().getSession(req.params.sessionId);
+  if (!info) return res.json({ status: 'disconnected' });
+  res.json({ status: info.status, name: info.name || null, connectedAt: info.connectedAt || null });
+});
+
+// ── Disconnect ─────────────────────────────────────────────────────────────
 app.post('/api/disconnect', async (req, res) => {
   const { sessionId } = req.body || {};
   if (!sessionId) return res.status(400).json({ error: 'Session ID required' });
@@ -94,12 +125,7 @@ app.post('/api/disconnect', async (req, res) => {
   res.json({ success: true });
 });
 
-// ── Socket.io (bonus — works on persistent servers; no-op on serverless) ─────
-io.on('connection', (socket) => {
-  socket.emit('sessions', getSessionManager().allSessions());
-});
-
-// ── Server start (direct run only, not Vercel import) ────────────────────────
+// ── Server start (direct run only) ────────────────────────────────────────
 if (require.main === module) {
   server.listen(PORT, () => {
     console.log(`\n╔════════════════════════════╗`);
