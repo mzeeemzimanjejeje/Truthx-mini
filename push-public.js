@@ -17,10 +17,10 @@ const path = require('path');
 const https = require('https');
 
 const PUBLIC_REPO = process.env.PUBLIC_REPO || 'Courtney250/TRUTH-MD';
-const TOKEN = (process.env.COURTNEY_GITHUB_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
+const TOKEN = (process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
 
 if (!TOKEN) {
-    console.error('❌ No GitHub token found. Set COURTNEY_GITHUB_TOKEN or GITHUB_PERSONAL_ACCESS_TOKEN env var.');
+    console.error('❌ GITHUB_PERSONAL_ACCESS_TOKEN is not set in your environment secrets.');
     process.exit(1);
 }
 

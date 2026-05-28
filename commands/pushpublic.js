@@ -7,11 +7,11 @@ async function pushPublicCommand(sock, chatId, message, args, isOwner) {
     }
 
     const publicRepo = process.env.PUBLIC_REPO || 'Courtney250/TRUTH-MD';
-    const token = (process.env.COURTNEY_GITHUB_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
+    const token = (process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
 
     if (!token) {
         return sock.sendMessage(chatId, {
-            text: `❌ No GitHub token found.\n\nSet *COURTNEY_GITHUB_TOKEN* in your environment secrets with write access to *${publicRepo}*.`
+            text: `❌ GITHUB_PERSONAL_ACCESS_TOKEN is not set in your environment secrets.`
         }, { quoted: message });
     }
 

@@ -5,10 +5,10 @@ const path = require("path");
 const REPO_OWNER = "mzeeemzimanjejeje";
 const REPO_NAME = "Maintaining";
 const BRANCH = "main";
-const TOKEN = (process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
+const TOKEN = (process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
 
 if (!TOKEN) {
-  console.error("❌ No GitHub token found. Set GITHUB_PERSONAL_ACCESS_TOKEN in your environment secrets.");
+  console.error("❌ GITHUB_PERSONAL_ACCESS_TOKEN is not set in your environment secrets.");
   process.exit(1);
 }
 

@@ -75,11 +75,7 @@ function withTimeout(promise, ms, label) {
 }
 
 function getGitToken() {
-    // GITHUB_PERSONAL_ACCESS_TOKEN is the Replit-managed token name; also accept the
-    // standard GITHUB_TOKEN / GH_TOKEN names so Heroku config vars work too.
     return (
-        process.env.GITHUB_TOKEN ||
-        process.env.GH_TOKEN ||
         process.env.GITHUB_PERSONAL_ACCESS_TOKEN ||
         ''
     ).trim();

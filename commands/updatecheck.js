@@ -28,12 +28,7 @@ function fetchJson(url) {
 const NIX_GIT_PATH = '/nix/store/60rvdhr04h70r6dyybakaqzbwy15vwdc-replit-runtime-path/bin';
 
 function getGitToken() {
-    return (
-        process.env.GITHUB_TOKEN ||
-        process.env.GH_TOKEN ||
-        process.env.GITHUB_PERSONAL_ACCESS_TOKEN ||
-        ''
-    ).trim();
+    return (process.env.GITHUB_PERSONAL_ACCESS_TOKEN || '').trim();
 }
 
 function apiRequest(apiPath, token, timeoutMs = 12000) {
