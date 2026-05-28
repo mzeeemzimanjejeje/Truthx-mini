@@ -24,7 +24,7 @@ async function closeGCCommand(sock, chatId, message, senderId) {
 
     } catch (err) {
         console.error('closeGCCommand error:', err);
-        throw err;
+        await sock.sendMessage(chatId, { text: '❌ Failed to close group. Make sure I am an admin.' }, { quoted: message }).catch(() => {});
     }
 }
 
