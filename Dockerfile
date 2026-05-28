@@ -21,8 +21,7 @@ RUN npm install --production --legacy-peer-deps --no-audit --no-fund
 
 COPY . .
 
-# Railway injects PORT at runtime — default to 5000 for local/VPS Docker runs
-ENV PORT=5000
-EXPOSE 5000
+# Railway injects PORT at runtime
+EXPOSE 3000
 
 CMD ["node", "server.js"]
