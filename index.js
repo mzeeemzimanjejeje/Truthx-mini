@@ -1998,6 +1998,8 @@ async function startXeonBotInc() {
         log('[AUTH] Using better-sqlite3 as auth state', 'cyan');
     }
 
+    global._saveCreds = saveCreds;
+
     if (state.creds?.me && !state.creds.me.name) {
         state.creds.me.name = state.creds.me.id?.split(':')[0] || 'TRUTH-MD';
         Promise.resolve(saveCreds()).catch(() => {});
@@ -3724,10 +3726,15 @@ async function gracefulShutdown(signal) {
 const _isReplit = !!(process.env.REPLIT_DB_URL || process.env.REPL_ID || process.env.REPLIT_SLUG);
 process.on('SIGTERM', () => {
     if (_isReplit) {
-        // Replit sends SIGTERM during checkpoints — just flush data and keep running
+        // Replit sends SIGTERM during checkpoints — flush data and keep running
         log('[TRUTH-MD] SIGTERM on Replit (checkpoint) — flushing and continuing...', 'yellow');
         try { require('./lib/configdb').flushSync(); } catch (_) {}
         try { require('./lib/persistentStore').backupAll(process.cwd()); } catch (_) {}
+        try { require('./lib/persistentStore').backupCreds(process.cwd()); } catch (_) {}
+        // Push creds to PostgreSQL so they survive a full filesystem wipe
+        if (global._saveCreds) {
+            Promise.resolve(global._saveCreds()).catch(() => {});
+        }
         return;
     }
     gracefulShutdown('SIGTERM');
