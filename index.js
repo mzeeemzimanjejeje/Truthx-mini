@@ -722,8 +722,19 @@ const healthServer = http.createServer((req, res) => {
 });
 healthServer.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        console.log(`Port ${HEALTH_PORT} in use, trying ${Number(HEALTH_PORT) + 1}...`);
-        healthServer.listen(Number(HEALTH_PORT) + 1, '0.0.0.0');
+        // On Railway / Heroku / any cloud, the PORT is fixed — never drift to PORT+1
+        // as the platform's router only knows about the declared port.
+        // Kill whatever is holding the port, then retry on the same port.
+        console.log(`Port ${HEALTH_PORT} in use — killing conflicting process and retrying...`);
+        try {
+            require('child_process').execSync(
+                `fuser -k ${HEALTH_PORT}/tcp 2>/dev/null || lsof -ti:${HEALTH_PORT} | xargs kill -9 2>/dev/null || true`,
+                { stdio: 'ignore' }
+            );
+        } catch (_) {}
+        setTimeout(() => {
+            try { healthServer.listen(HEALTH_PORT, '0.0.0.0'); } catch (_) {}
+        }, 1000);
     }
 });
 healthServer.listen(HEALTH_PORT, '0.0.0.0');
