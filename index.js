@@ -3593,13 +3593,17 @@ try {
 }
 
 tylor().catch(err => log(`Fatal error starting bot: ${err.message}`, 'red', true));
-// On Pterodactyl panels, never exit the process — self-restart internally instead
+// On Pterodactyl panels, Replit, and Railway: never exit the process — self-restart internally instead
 const isPanel = !!process.env.P_SERVER_UUID;
+const _isManagedHost = isPanel
+    || !!(process.env.REPLIT_DB_URL || process.env.REPL_ID || process.env.REPLIT_SLUG)
+    || !!(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_NAME);
 function safeRestart(reason, delayMs = 10000) {
-    log(`🔄 ${reason} — restarting in ${delayMs / 1000}s...`, 'yellow');
+    log(`🔄 ${reason} — reconnecting in ${delayMs / 1000}s...`, 'yellow');
     setTimeout(() => {
-        if (isPanel) {
-            // Panel: restart internally so process stays alive and panel stays green
+        if (_isManagedHost) {
+            // Managed host (Panel/Replit/Railway): reconnect internally so the session
+            // survives and the process stays alive — no process.exit needed
             global.isBotConnected = false;
             global._welcomeSent = false;
             global.connectionMessageSent = false;
