@@ -1212,61 +1212,18 @@ async function getLoginMethod() {
             return 'number';
         }
 
-        // Show console choice (works in Pterodactyl via panel stdin)
-        // AND serve web UI in parallel — whichever the user uses first wins
+        // Web-UI-only auth on hosted environments — no readline/stdin needed.
+        // The HTTP server already listening on HEALTH_PORT keeps the event loop alive
+        // indefinitely. The web form POST handler calls global._loginResolve() when
+        // the user submits their Session ID or phone number via the browser.
         global._awaitingLogin = true;
-        console.log(chalk.yellow('\nChoose authentication method:'));
-        console.log(chalk.yellow('1. Enter Session ID'));
-        console.log(chalk.yellow('2. Enter Phone Number'));
+        log('Waiting for authentication via the web UI — open this bot\'s URL in your browser to pair.', 'cyan');
 
         const chosenMethod = await new Promise(resolve => {
-            global._loginResolve = resolve;
-
-            // Listen on stdin for console-based choice (Pterodactyl panel "Type a command..." box)
-            const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout, terminal: false });
-            let step = 'choice';
-            let consoleResolved = false;
-
-            const consoleResolve = (method) => {
-                if (consoleResolved) return;
-                consoleResolved = true;
+            global._loginResolve = (method) => {
                 global._awaitingLogin = false;
-                global._loginResolve = null;
-                rl.close();
                 resolve(method);
             };
-
-            rl.on('line', async (line) => {
-                line = line.trim();
-                if (step === 'choice') {
-                    if (line === '1') {
-                        step = 'session';
-                        console.log(chalk.green('Enter your Session ID (format: TRUTH-MD:~xxxxxx):'));
-                    } else if (line === '2') {
-                        step = 'phone';
-                        console.log(chalk.green('Enter your WhatsApp number with country code (e.g. 254712345678):'));
-                    } else {
-                        console.log(chalk.red('Invalid choice. Type 1 or 2:'));
-                    }
-                } else if (step === 'session') {
-                    if (!line.includes('TRUTH-MD:~')) {
-                        console.log(chalk.red("Invalid format. Must contain 'TRUTH-MD:~'. Try again:"));
-                        return;
-                    }
-                    global.SESSION_ID = line;
-                    consoleResolve('session');
-                } else if (step === 'phone') {
-                    const phone = line.replace(/[^0-9]/g, '');
-                    if (phone.length < 7) {
-                        console.log(chalk.red('Invalid number. Enter numbers only with country code:'));
-                        return;
-                    }
-                    global.phoneNumber = phone;
-                    consoleResolve('number');
-                }
-            });
-
-            rl.on('error', () => {}); // silently ignore stdin errors on envs without stdin
         });
 
         await saveLoginMethod(chosenMethod);
@@ -3725,16 +3682,17 @@ async function gracefulShutdown(signal) {
 }
 const _isReplit = !!(process.env.REPLIT_DB_URL || process.env.REPL_ID || process.env.REPLIT_SLUG);
 process.on('SIGTERM', () => {
-    if (_isReplit) {
-        // Replit sends SIGTERM during checkpoints — flush data and keep running
-        log('[TRUTH-MD] SIGTERM on Replit (checkpoint) — flushing and continuing...', 'yellow');
-        try { require('./lib/configdb').flushSync(); } catch (_) {}
-        try { require('./lib/persistentStore').backupAll(process.cwd()); } catch (_) {}
-        try { require('./lib/persistentStore').backupCreds(process.cwd()); } catch (_) {}
-        // Push creds to PostgreSQL so they survive a full filesystem wipe
-        if (global._saveCreds) {
-            Promise.resolve(global._saveCreds()).catch(() => {});
-        }
+    // Always flush data first
+    try { require('./lib/configdb').flushSync(); } catch (_) {}
+    try { require('./lib/persistentStore').backupAll(process.cwd()); } catch (_) {}
+    try { require('./lib/persistentStore').backupCreds(process.cwd()); } catch (_) {}
+    if (global._saveCreds) {
+        Promise.resolve(global._saveCreds()).catch(() => {});
+    }
+
+    if (_isReplit || global._awaitingLogin) {
+        // Replit checkpoints or bot is waiting for web UI pairing — keep running
+        log('[TRUTH-MD] SIGTERM received — flushing and continuing...', 'yellow');
         return;
     }
     gracefulShutdown('SIGTERM');
