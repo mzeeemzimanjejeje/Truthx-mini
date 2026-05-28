@@ -19,7 +19,7 @@ const POLL_MS       = 5 * 60 * 1000;   // fallback poll every 5 minutes
 const DEBOUNCE_MS   = 3000;            // wait 3 s after last change before pushing
 const GIT_REF_FILE  = path.join(process.cwd(), '.git', 'refs', 'heads', BRANCH);
 const REMOTE_URL    = () =>
-    `https://x-access-token:${process.env.GITHUB_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git`;
+    `https://x-access-token:${process.env.GITHUB_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_PERSONAL_ACCESS_TOKEN || ''}@github.com/${REPO_OWNER}/${REPO_NAME}.git`;
 
 function log(msg) {
     const ts = new Date().toLocaleString('en-US', { timeZone: 'Africa/Nairobi', hour12: false });
