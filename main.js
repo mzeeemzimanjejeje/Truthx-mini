@@ -737,6 +737,16 @@ const rawMessage = (
             return;
         }
 
+        // [DEBUG] Group message entry log — visible in PM2 logs (`pm2 logs TRUTH-MD`)
+        // Logs every group message that reaches processing so you can trace silence.
+        if (isGroup) {
+            const _grpShort = chatId.split('@')[0].slice(-6);
+            const _sndrShort = (resolveToPhoneJid(senderId) || senderId).split('@')[0];
+            const _preview = userMessage ? userMessage.slice(0, 60) : '[media/empty]';
+            const _isCmd = userMessage.startsWith(prefix);
+            console.log(`[GRP] ${_sndrShort}→${_grpShort} | ${type} | fromMe=${message.key.fromMe} | cmd=${_isCmd} | "${_preview}"`);
+        }
+
         const time = new Date().toLocaleTimeString();
         const pushname = message.pushName || "Unknown User";
         const isSelfChat = message.key.fromMe && !chatId.endsWith('@g.us') && !isChannel;
@@ -1005,7 +1015,12 @@ const rawMessage = (
 
         // Check admin status only for admin commands in groups
         if (isGroup && isAdminCommand) {
-            const adminStatus = await isAdmin(sock, chatId, senderId, message);
+            let adminStatus = { isSenderAdmin: false, isBotAdmin: false };
+            try {
+                adminStatus = await isAdmin(sock, chatId, senderId, message);
+            } catch (_adminErr) {
+                console.error(`[isAdmin] Failed for ${chatId}: ${_adminErr.message}`);
+            }
             isSenderAdmin = adminStatus.isSenderAdmin;
             isBotAdmin = adminStatus.isBotAdmin;
 
