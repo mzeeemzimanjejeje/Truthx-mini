@@ -1,7 +1,7 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────────
 # TRUTH-MD VPS Setup Script
-# Installs Docker + Docker Compose and launches the bot and nginx in one command.
+# Installs Docker + Docker Compose and launches the bot on port 80.
 #
 # Usage (run as root or with sudo):
 #   curl -fsSL https://raw.githubusercontent.com/mzeeemzimanjejeje/Truthx-mini/main/setup-vps.sh | bash
@@ -81,48 +81,42 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
     read -p "Press ENTER after editing .env to continue..." _
 fi
 
-# ── 6. Build and start containers ─────────────────────────────────────────────
-log "Building Docker image (this takes a few minutes on first run)..."
+# ── 6. Build and start container ──────────────────────────────────────────────
+log "Building Docker image (first run takes a few minutes)..."
 cd "$INSTALL_DIR"
 
 if command -v docker-compose &>/dev/null; then
-    docker-compose pull nginx 2>/dev/null || true
     docker-compose up -d --build
 else
-    docker compose pull nginx 2>/dev/null || true
     docker compose up -d --build
 fi
 
 # ── 7. Wait for health check ──────────────────────────────────────────────────
 log "Waiting for bot to come online..."
 for i in $(seq 1 30); do
-    if curl -sf http://localhost:5000/health >/dev/null 2>&1; then
+    if curl -sf http://localhost/health >/dev/null 2>&1; then
         log "Bot is online ✅"
         break
     fi
     sleep 3
     if [ "$i" -eq 30 ]; then
-        warn "Bot didn't respond on /health within 90s — check logs with: docker logs truth-md-bot"
+        warn "Didn't respond on /health after 90s — check: docker logs truth-md"
     fi
 done
 
 # ── 8. Show status ────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}  TRUTH-MD is deployed! 🚀${NC}"
+echo -e "${GREEN}  TRUTH-MD is live! 🚀${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
-echo "  Web UI:     http://${SERVER_IP}"
+echo "  Website:    http://${SERVER_IP}"
 echo "  Health:     http://${SERVER_IP}/health"
 echo ""
 echo "  Useful commands:"
-echo "    View logs:    docker logs -f truth-md-bot"
-echo "    Restart bot:  docker restart truth-md-bot"
-echo "    Stop all:     docker-compose down  (in $INSTALL_DIR)"
-echo "    Update bot:   cd $INSTALL_DIR && git pull && docker-compose up -d --build"
-echo ""
-echo "  To add HTTPS, install certbot and uncomment the SSL block in nginx/default.conf"
-echo "    apt install certbot python3-certbot-nginx"
-echo "    certbot --nginx -d your-domain.com"
+echo "    View logs:   docker logs -f truth-md"
+echo "    Restart:     docker restart truth-md"
+echo "    Stop:        docker-compose down  (in $INSTALL_DIR)"
+echo "    Update:      cd $INSTALL_DIR && git pull && docker-compose up -d --build"
 echo ""
