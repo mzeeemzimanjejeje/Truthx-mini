@@ -1,22 +1,25 @@
 FROM node:20-slim
 
-# Install system dependencies
+# Install system dependencies + build tools required for native modules
+# (better-sqlite3, sharp need python3/make/g++ to compile from source)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
-    chromium \
     imagemagick \
     graphicsmagick \
     webp \
+    python3 \
+    make \
+    g++ \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install --production --legacy-peer-deps
+RUN npm install --production --legacy-peer-deps --no-audit --no-fund
 
-# Copy the rest of the application
 COPY . .
 
-# Start the bot
+EXPOSE 5000
+
 CMD ["node", "index.js"]

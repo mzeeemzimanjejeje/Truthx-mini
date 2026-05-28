@@ -1,6 +1,6 @@
 {
-  "name": "TRUTH-MD Pair Web",
-  "description": "Multi-session WhatsApp bot. Users visit the site, enter their number, get a pairing code — bot connects instantly. No session ID needed.",
+  "name": "TRUTH-MD WhatsApp Bot",
+  "description": "Feature-rich WhatsApp bot. Users visit the web UI, pair their number, and the bot runs commands automatically.",
   "repository": "https://github.com/mzeeemzimanjejeje/Truthx-mini",
   "keywords": [
     "whatsapp",
@@ -9,6 +9,14 @@
     "node"
   ],
   "env": {
+    "SESSION_ID": {
+      "description": "WhatsApp session credential string (TRUTH-MD:~xxxxx). Leave blank to pair via the web UI on first boot.",
+      "required": false
+    },
+    "OWNER_NUMBER": {
+      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567). Grants owner-level commands.",
+      "required": false
+    },
     "BOT_NAME": {
       "description": "Display name shown by the bot",
       "value": "TRUTH-MD",
@@ -17,11 +25,6 @@
     "PREFIX": {
       "description": "Command prefix (e.g. . or !)",
       "value": ".",
-      "required": false
-    },
-    "OWNER_NUMBER": {
-      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567). Optional — bot works for all paired users without this.",
-      "value": "",
       "required": false
     }
   },
@@ -36,9 +39,5 @@
       "plan": "heroku-postgresql:essential-0"
     }
   ],
-  "buildpacks": [
-    {
-      "url": "heroku/nodejs"
-    }
-  ]
+  "stack": "container"
 }
