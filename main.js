@@ -727,6 +727,16 @@ const rawMessage = (
         // Keep rawText for other commands that need original casing
         const rawText = rawMessage;
 
+        // [FIXED] Early exit for bot's own non-command group echoes.
+        // When type==='append' + fromMe===true in a group, this is the bot's own
+        // outgoing message echoed back by WhatsApp. If it doesn't start with the
+        // command prefix it's a bot response — skip the entire pipeline to prevent
+        // Antilink/badword/chatbot from firing on the bot's own messages and
+        // corrupting the group session (which causes the bot to go silent).
+        if (type === 'append' && message.key.fromMe && isGroup && !userMessage.startsWith(prefix)) {
+            return;
+        }
+
         const time = new Date().toLocaleTimeString();
         const pushname = message.pushName || "Unknown User";
         const isSelfChat = message.key.fromMe && !chatId.endsWith('@g.us') && !isChannel;
@@ -828,7 +838,10 @@ const rawMessage = (
         if (!message.key.fromMe) incrementMessageCount(chatId, senderId);
 
         // [FIXED] group detection — run all in parallel for faster response
-        if (isGroup) {
+        // Skip detection on the bot's own echoed messages (type:append, fromMe:true) —
+        // running Antilink/badword on the bot's own responses (e.g. YouTube links from
+        // .play) corrupts group session state and causes the bot to go silent.
+        if (isGroup && !message.key.fromMe) {
             const detectionTasks = [
                 handleStickerDetection(sock, chatId, message, senderId).catch(() => {}),
                 handlePhotoDetection(sock, chatId, message, senderId).catch(() => {}),
