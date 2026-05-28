@@ -3690,8 +3690,8 @@ process.on('SIGTERM', () => {
         Promise.resolve(global._saveCreds()).catch(() => {});
     }
 
-    if (_isReplit || global._awaitingLogin) {
-        // Replit checkpoints or bot is waiting for web UI pairing — keep running
+    if (_isReplit && !global._awaitingLogin) {
+        // Bot is actively connected on Replit — survive checkpoint SIGTERMs
         log('[TRUTH-MD] SIGTERM received — flushing and continuing...', 'yellow');
         return;
     }
