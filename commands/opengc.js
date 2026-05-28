@@ -24,7 +24,7 @@ async function openGCCommand(sock, chatId, message, senderId) {
 
     } catch (err) {
         console.error('openGCCommand error:', err);
-        throw err;
+        await sock.sendMessage(chatId, { text: '❌ Failed to open group. Make sure I am an admin.' }, { quoted: message }).catch(() => {});
     }
 }
 
