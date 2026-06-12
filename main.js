@@ -609,6 +609,18 @@ async function handleMessages(sock, messageUpdate, printLog ) {
             } catch (_e) {}
         }
 
+        // Warm group metadata early so command replies do not pay the first-hit
+        // cost during sendMessage() or isAdmin() checks.
+        if (isGroup) {
+            try {
+                if (typeof sock.groupMetadataCached === 'function') {
+                    sock.groupMetadataCached(chatId).catch(() => {});
+                } else if (typeof sock.groupMetadata === 'function') {
+                    sock.groupMetadata(chatId).catch(() => {});
+                }
+            } catch (_e) {}
+        }
+
         // Devreact — called here so LID map is already updated from participantAlt above
         handleDevReact(sock, message, senderId).catch(e => console.error('[devReact] uncaught:', e?.message || e));
 

@@ -1993,7 +1993,9 @@ async function startXeonBotInc() {
         // groupMetadata() network call during encryption. If the cache misses, Baileys
         // falls back to its own network call — but commands pre-warm the cache before
         // sending so a miss should be rare after the first command in any group.
-        cachedGroupMetadata: async (jid) => _getCachedGroupMeta(jid) || undefined,
+        // Use the shared timeout-backed cache lookup so a cold group never
+        // falls through to an unbounded live metadata fetch inside Baileys.
+        cachedGroupMetadata: async (jid) => _getGroupMeta(XeonBotInc, jid).catch(() => undefined),
         getMessage: async (key) => {
             if (!key?.remoteJid || !key?.id) return undefined;
             let jid = jidNormalizedUser(key.remoteJid);
