@@ -1,43 +1,18 @@
 {
-  "name": "TRUTH-MD WhatsApp Bot",
-  "description": "Feature-rich WhatsApp bot. Users visit the web UI, pair their number, and the bot runs commands automatically.",
+  "name": "TRUTH-MD Pairing Site",
+  "description": "A simple Heroku web app for pairing a WhatsApp number. Deploy it and open the site immediately.",
   "repository": "https://github.com/mzeeemzimanjejeje/Truthx-mini",
   "keywords": [
     "whatsapp",
-    "bot",
-    "baileys",
+    "pairing",
+    "web",
     "node"
   ],
-  "env": {
-    "SESSION_ID": {
-      "description": "WhatsApp session credential string (TRUTH-MD:~xxxxx). Leave blank to pair via the web UI on first boot.",
-      "required": false
-    },
-    "OWNER_NUMBER": {
-      "description": "Your WhatsApp number with country code, no + (e.g. 263771234567). Grants owner-level commands.",
-      "required": false
-    },
-    "BOT_NAME": {
-      "description": "Display name shown by the bot",
-      "value": "TRUTH-MD",
-      "required": false
-    },
-    "PREFIX": {
-      "description": "Command prefix (e.g. . or !)",
-      "value": ".",
-      "required": false
-    }
-  },
   "formation": {
     "web": {
       "quantity": 1,
       "size": "eco"
     }
   },
-  "addons": [
-    {
-      "plan": "heroku-postgresql:essential-0"
-    }
-  ],
   "stack": "container"
 }

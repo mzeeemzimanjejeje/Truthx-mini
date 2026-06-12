@@ -60,7 +60,7 @@ Heroku is connected to the public repo and auto-deploys on every push to `main`.
 The `Procfile` is already configured:
 
 ```
-web: node --max-old-space-size=1024 --optimize-for-size --gc-interval=100 index.js
+web: node server.js
 ```
 
 ### Pushing Directly from Replit
@@ -76,11 +76,10 @@ Heroku will auto-deploy as soon as the public repo receives the push.
 
 ## Environment Variables
 
-Make sure the following are set on Heroku (via Settings → Config Vars):
+No Heroku config vars are required just to display the website.
 
-- `SESSION_ID` — Bot session identifier
-- `GITHUB_TOKEN` — (Optional) For private repo update support in the `.update`
-  command
+If you later want to use bot commands, set `SESSION_ID` or `OWNER_NUMBER`
+after deployment.
 
 ## Troubleshooting
 

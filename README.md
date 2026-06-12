@@ -34,17 +34,11 @@ Click the **Deploy on Railway** button above, then set these environment variabl
 
 ## 🟣 Deploy on Heroku
 
-Click the **Deploy to Heroku** button above, then set these environment variables:
+Click the **Deploy to Heroku** button above and deploy.
 
-| Variable | Required | Description |
-|---|---|---|
-| `SESSION_ID` | Recommended | WhatsApp session string (`TRUTH-MD:~xxxxx`) — skip to pair via web UI instead |
-| `OWNER_NUMBER` | ✅ Yes | Your WhatsApp number with country code, no `+` (e.g. `254712345678`) |
-| `DATABASE_URL` | Auto | Added automatically with the Heroku Postgres add-on |
-| `BOT_NAME` | Optional | Bot display name (default: `TRUTH-MD`) |
-| `PREFIX` | Optional | Command prefix (default: `.`) |
+No config fields are required during deployment. After the app opens, use the web page to pair your WhatsApp number.
 
-> **Heroku Postgres:** Go to Resources → Add-ons → search **Heroku Postgres** → attach it.
+If you already have a session string, you can still set `SESSION_ID` later in Heroku Config Vars, but it is not required for the site to load.
 
 ---
 
