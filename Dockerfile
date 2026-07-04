@@ -22,6 +22,6 @@ RUN npm install --production --legacy-peer-deps --no-audit --no-fund
 COPY . .
 
 # Railway injects PORT at runtime
-EXPOSE 3000
+EXPOSE $PORT
 
 CMD ["node", "server.js"]
