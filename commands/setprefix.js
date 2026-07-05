@@ -1,13 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-// Path to store prefix settings
-const PREFIX_FILE = path.join(__dirname, '..', 'data', 'prefix.json');
-
-async function _mirrorPrefix() {
-    try { require('../lib/persistentStore').mirrorFile(PREFIX_FILE); } catch (_) {}
-    try { await require('../lib/pgDataStore').mirrorFile(PREFIX_FILE); } catch (_) {}
-}
+const { getPrefix, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
 
 // Default prefix
 const DEFAULT_PREFIX = '.';
@@ -106,6 +99,7 @@ function isPrefixless() {
 }
 
 async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessage, currentPrefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const args = userMessage.split(' ').slice(1);
     const newPrefix = args[0];
     
@@ -129,7 +123,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
 
     if (!newPrefix) {
         // Show current prefix
-        const current = getRawPrefix();
+        const current = getPrefix(botJid) || '.';
         const displayPrefix = current === NO_PREFIX ? 'None (prefixless)' : current;
         await sock.sendMessage(chatId, { 
             text: `Use: ${current === NO_PREFIX ? 'command' : current + 'setprefix'} then put the prefix you want`,
@@ -148,7 +142,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
 
     if (newPrefix === 'reset') {
         // Reset to default prefix
-        const success = await resetPrefix();
+        const success = await deleteSessionSetting(botJid, 'PREFIX');
         if (success) {
             const defaultPrefix = getPrefix();
             await sock.sendMessage(chatId, { 
@@ -182,7 +176,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
 
     if (newPrefix.toLowerCase() === NO_PREFIX) {
         // Set to prefixless mode
-        const success = await setPrefix('');
+        const success = await setSessionSetting(botJid, 'PREFIX', 'none');
         if (success) {
             await sock.sendMessage(chatId, { 
                 text: '✅️ You have successfully changed prefix to *none*',
@@ -230,7 +224,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
         return;
     }
 
-    const success = await setPrefix(newPrefix);
+    const success = await setSessionSetting(botJid, 'PREFIX', newPrefix);
     if (success) {
         await sock.sendMessage(chatId, { 
             text: `✅ Prefix successfully set to: *${newPrefix}*`,

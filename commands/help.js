@@ -5,9 +5,8 @@ const path = require('path');
 const os = require('os');
 const { getMenuStyle, getMenuSettings, MENU_STYLES } = require('./menuSettings');
 const { generateWAMessageFromContent } = require('@whiskeysockets/baileys');
-const { getPrefix } = require('./setprefix');
+const { getPrefix, getBotName, getSessionSetting } = require('../lib/sessionSettings');
 const { getOwnerName } = require('./setowner');
-const { getBotName } = require('./setbot');
 const { applyWatermark } = require('./setwatermark');
 
 const more = String.fromCharCode(8206);
@@ -65,17 +64,17 @@ const progressBar = (used, total, size = 10) => {
 };
 
 // Generate Menu Function
-const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, prefix = '.') => {
+const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, botJid) => {
     const memoryUsage = process.memoryUsage();
     const botUsedMemory = memoryUsage.heapUsed;
     const totalMemory = os.totalmem();
     const systemUsedMemory = totalMemory - os.freemem();
-    const prefix2 = getPrefix();
-    let newBot = getBotName();
+    const prefix2 = getPrefix(botJid);
+    let newBot = getBotName(botJid);
     const menuSettings = getMenuSettings();
     // Show owner name but never show a phone number — if the stored value is
     // blank or looks like digits/JID, fall back to 'Not Set!'
-    const _rawOwner = getOwnerName();
+    const _rawOwner = getOwnerName(botJid);
     const newOwner = (!_rawOwner || /^\d{5,}/.test(_rawOwner) || _rawOwner.includes('@s.whatsapp.net'))
         ? 'Not Set!'
         : _rawOwner;
@@ -230,9 +229,10 @@ function createFakeContact(message) {
 
 // YOUR EXACT MENU STYLE FUNCTION WITH FIXED tylorkids AND fkontak FOR ALL STYLES
 async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thumbnailBuffer, pushname) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const fkontak = createFakeContact(message);
-    const botname = getBotName();
-    const ownername = getOwnerName();
+    const botname = getBotName(botJid);
+    const ownername = getOwnerName(botJid);
     const tylorkids = thumbnailBuffer;
     const plink = "https://github.com/Courtney250/TRUTH-MD";
 
@@ -256,6 +256,7 @@ async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thu
 
 // Main help command function
 async function helpCommand(sock, chatId, message) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const pushname = message.pushName || "Unknown User";
     const menuStyle = getMenuStyle();
     const start = Date.now();
@@ -270,9 +271,7 @@ async function helpCommand(sock, chatId, message) {
     const uptimeFormatted = formatTime(uptimeInSeconds);
     let currentMode = 'public';
     try {
-        const { getConfig } = require('../lib/configdb');
-        const _settings = require('../settings');
-        currentMode = getConfig('MODE') || _settings.commandMode || 'public';
+        currentMode = getSessionSetting(botJid, 'MODE', 'public');
     } catch (_) {
         try {
             const data = JSON.parse(fs.readFileSync('./data/messageCount.json'));
@@ -299,7 +298,7 @@ async function helpCommand(sock, chatId, message) {
     if (ping > 60000) ping = now - start || 1; // clock skew guard
 
     // Build menu text
-    let menulist = generateMenu(pushname, currentMode, hostName, ping, uptimeFormatted);
+    let menulist = generateMenu(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
     menulist = applyWatermark(menulist);
 
     try {

@@ -1432,7 +1432,7 @@ async function sendWelcomeMessage(XeonBotInc) {
 
     try {
 
-        const { getPrefix, handleSetPrefixCommand } = require('./commands/setprefix');
+        const { getPrefix, getSessionSetting, setSessionSetting } = require('./lib/sessionSettings');
         if (global._welcomeSent) return;
 
         global._welcomeSent = true;
@@ -1442,49 +1442,19 @@ async function sendWelcomeMessage(XeonBotInc) {
         global._pairingCodeForWeb = null;
         const pNumber = XeonBotInc.user.id.split(':')[0] + '@s.whatsapp.net';
         const pNum = XeonBotInc.user.id.split(':')[0];
+        const botJid = pNumber;
 
-        // Auto-register the SESSION_ID holder as owner if not already set.
-        // Works on Heroku (ephemeral FS), Katacamp, and any panel —
-        // no OWNER_NUMBER env var needed when SESSION_ID is provided.
+        // Auto-register the SESSION_ID holder as owner for this session
         try {
-            const ownerFilePath = path.join(__dirname, 'data', 'owner.json');
-            const ownerFileData = fs.existsSync(ownerFilePath)
-                ? JSON.parse(fs.readFileSync(ownerFilePath, 'utf8'))
-                : { ownerNumber: '', ownerName: '' };
-
-            // Also check configdb as a secondary persistent source
-            let persistedOwner = '';
-            try {
-                const { getConfig } = require('./lib/configdb');
-                persistedOwner = getConfig('AUTO_OWNER_NUMBER') || '';
-            } catch (_) {}
-
-            const resolvedOwner = ownerFileData.ownerNumber?.trim() || persistedOwner;
-
-            if (!resolvedOwner) {
-                // First run / Heroku dyno / ephemeral FS — auto-detect from session
-                ownerFileData.ownerNumber = pNum;
-                ownerFileData.ownerName = XeonBotInc.user?.name || 'Not Set!';
-                fs.writeFileSync(ownerFilePath, JSON.stringify(ownerFileData, null, 2));
-
-                // Persist to configdb so it survives even if data/ is wiped
-                try {
-                    const { setConfig } = require('./lib/configdb');
-                    setConfig('AUTO_OWNER_NUMBER', pNum);
-                } catch (_) {}
-
-                log(`✅ Auto-detected owner from SESSION_ID: ${pNum}`, 'green');
-            } else if (!ownerFileData.ownerNumber?.trim() && persistedOwner) {
-                // owner.json was wiped (e.g. Heroku restart) but configdb has it
-                ownerFileData.ownerNumber = persistedOwner;
-                ownerFileData.ownerName = XeonBotInc.user?.name || 'Not Set!';
-                fs.writeFileSync(ownerFilePath, JSON.stringify(ownerFileData, null, 2));
-                log(`✅ Restored owner from persistent config: ${persistedOwner}`, 'green');
+            const currentOwner = getSessionSetting(botJid, 'OWNER_NUMBER');
+            if (!currentOwner) {
+                setSessionSetting(botJid, 'OWNER_NUMBER', pNum);
+                setSessionSetting(botJid, 'OWNERNAME', XeonBotInc.user?.name || 'Not Set!');
+                log(`✅ Auto-detected owner for session ${pNum}: ${pNum}`, 'green');
             }
-
-            // Always keep global.OWNER_NUMBER in sync so permission checks work instantly
-            const effectiveOwner = ownerFileData.ownerNumber?.trim() || pNum;
-            global.OWNER_NUMBER = effectiveOwner;
+            
+            // Legacy sync for single-tenant fallback
+            global.OWNER_NUMBER = getSessionSetting(botJid, 'OWNER_NUMBER') || pNum;
         } catch (_) {}
 
         // Ensure the bot's own number and the bot maintainer are always in sudo
@@ -1517,14 +1487,13 @@ async function sendWelcomeMessage(XeonBotInc) {
         } catch (_) {}
         let currentMode = 'public';
         try {
-            const { getConfig } = require('./lib/configdb');
-            currentMode = getConfig('MODE', 'public');
+            currentMode = getSessionSetting(botJid, 'MODE', 'public');
         } catch (_) { }
         try {
             data.isPublic = currentMode === 'public';
             fs.writeFileSync('./data/messageCount.json', JSON.stringify(data, null, 2));
         } catch (_) { }
-        const prefix = getPrefix();
+        const prefix = getPrefix(botJid);
 
         const botVersion = require('./package.json').version || '0.0.0';
         const startupTime = ((Date.now() - (global._startupTimestamp || Date.now())) / 1000).toFixed(1);
@@ -1548,8 +1517,7 @@ async function sendWelcomeMessage(XeonBotInc) {
         global.errorRetryCount = 0;
 
         try {
-            const { getConfig } = require('./lib/configdb');
-            if (getConfig('AUTOBIO') === 'true') {
+            if (getSessionSetting(botJid, 'AUTOBIO') === 'true') {
                 const { startAutoBio } = require('./commands/autobio');
                 startAutoBio(XeonBotInc);
             }

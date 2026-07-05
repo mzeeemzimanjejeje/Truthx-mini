@@ -1,4 +1,5 @@
-const { setConfig, getConfig } = require('../lib/configdb');
+const { setConfig: setGlobalConfig, getConfig: getGlobalConfig } = require('../lib/configdb');
+const { getSessionSetting, setSessionSetting } = require('../lib/sessionSettings');
 const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -20,6 +21,7 @@ const channelInfo = {
 };
 
 async function setbotimageCommand(sock, chatId, senderId, message, userMessage) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         if (!message.key.fromMe && !await isSudo(senderId)) {
             return sock.sendMessage(chatId, { text: '❗ Only the bot owner can use this command.', ...channelInfo }, { quoted: message });
@@ -71,7 +73,7 @@ async function setbotimageCommand(sock, chatId, senderId, message, userMessage) 
             return sock.sendMessage(chatId, { text: '❌ Provide a valid image URL or reply to an image.', ...channelInfo }, { quoted: message });
         }
 
-        await setConfig("BOTIMAGE", imageUrl);
+        await setSessionSetting(botJid, "BOTIMAGE", imageUrl);
         await sock.sendMessage(chatId, { text: `✅ Bot image updated.\n\n*New URL:* ${imageUrl}`, ...channelInfo }, { quoted: message });
 
     } catch (err) {
@@ -81,6 +83,7 @@ async function setbotimageCommand(sock, chatId, senderId, message, userMessage) 
 }
 
 async function setbotnameCommand(sock, chatId, senderId, message, userMessage) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         if (!message.key.fromMe && !await isSudo(senderId)) {
             return sock.sendMessage(chatId, { text: '❗ Only the bot owner can use this command.', ...channelInfo }, { quoted: message });
@@ -93,7 +96,7 @@ async function setbotnameCommand(sock, chatId, senderId, message, userMessage) {
             return sock.sendMessage(chatId, { text: '❌ Provide a bot name.', ...channelInfo }, { quoted: message });
         }
 
-        await setConfig("BOTNAME", newName);
+        await setSessionSetting(botJid, "BOTNAME", newName);
         await sock.sendMessage(chatId, { text: `✅ Bot name updated to: *${newName}*`, ...channelInfo }, { quoted: message });
 
     } catch (err) {
@@ -103,10 +106,11 @@ async function setbotnameCommand(sock, chatId, senderId, message, userMessage) {
 }
 
 async function setvarCommand(sock, chatId, senderId, message, userMessage, prefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         const getConfigValue = (key, defaultVal) => {
-            const val = getConfig(key);
-            return val !== null ? val : defaultVal;
+            const val = getSessionSetting(botJid, key);
+            return val !== null && val !== undefined ? val : defaultVal;
         };
 
         const cmdList = `
@@ -189,13 +193,14 @@ async function setvarCommand(sock, chatId, senderId, message, userMessage, prefi
 }
 
 async function modeCommand(sock, chatId, senderId, message, userMessage, prefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         if (!message.key.fromMe && !await isSudo(senderId)) {
             return sock.sendMessage(chatId, { text: '*📛 Only the owner can use this command!*', ...channelInfo }, { quoted: message });
         }
 
         const args = userMessage.split(/\s+/).slice(1);
-        const currentMode = getConfig('MODE') || settings.commandMode || 'public';
+        const currentMode = getSessionSetting(botJid, 'MODE') || settings.commandMode || 'public';
         const validModes = ['public', 'private', 'groups', 'dms'];
 
         if (!args[0]) {
@@ -212,7 +217,7 @@ async function modeCommand(sock, chatId, senderId, message, userMessage, prefix)
         const modeArg = args[0].toLowerCase();
 
         if (validModes.includes(modeArg)) {
-            await setConfig('MODE', modeArg);
+            await setSessionSetting(botJid, 'MODE', modeArg);
             try {
                 const msgCountPath = './data/messageCount.json';
                 const msgCount = JSON.parse(fs.readFileSync(msgCountPath, 'utf8'));
@@ -233,6 +238,7 @@ async function modeCommand(sock, chatId, senderId, message, userMessage, prefix)
 }
 
 async function toggleSettingCommand(sock, chatId, senderId, message, settingKey, settingName, prefix, commandName) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         if (!message.key.fromMe && !await isSudo(senderId)) {
             return sock.sendMessage(chatId, { text: '*📛 Only the owner can use this command!*', ...channelInfo }, { quoted: message });
@@ -246,7 +252,7 @@ async function toggleSettingCommand(sock, chatId, senderId, message, settingKey,
             return sock.sendMessage(chatId, { text: `*Example: ${prefix}${commandName} on/off*`, ...channelInfo }, { quoted: message });
         }
 
-        await setConfig(settingKey, status === 'on' ? 'true' : 'false');
+        await setSessionSetting(botJid, settingKey, status === 'on' ? 'true' : 'false');
         return sock.sendMessage(chatId, { text: `✅ ${settingName} has been turned ${status}.`, ...channelInfo }, { quoted: message });
 
     } catch (err) {
@@ -256,15 +262,16 @@ async function toggleSettingCommand(sock, chatId, senderId, message, settingKey,
 }
 
 async function setauthorCommand(sock, chatId, senderId, message, userMessage) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         const isOwner = message.key.fromMe || await isSudo(senderId);
         if (!isOwner) return sock.sendMessage(chatId, { text: '❌ Only owner can use this command.' }, { quoted: message });
         const text = userMessage.replace(/^\.setauthor\s*/i, '').trim();
         if (!text) {
-            const current = getConfig('STICKER_AUTHOR') || '(not set)';
+            const current = getSessionSetting(botJid, 'STICKER_AUTHOR') || '(not set)';
             return sock.sendMessage(chatId, { text: `✏️ *Sticker Author*\n\n_Current:_ ${current}\n\nUsage: *.setauthor <name>*` }, { quoted: message });
         }
-        setConfig('STICKER_AUTHOR', text);
+        await setSessionSetting(botJid, 'STICKER_AUTHOR', text);
         global.author = text;
         return sock.sendMessage(chatId, { text: `✅ Sticker author set to: *${text}*` }, { quoted: message });
     } catch (err) {
@@ -273,15 +280,16 @@ async function setauthorCommand(sock, chatId, senderId, message, userMessage) {
 }
 
 async function setpacknameCommand(sock, chatId, senderId, message, userMessage) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         const isOwner = message.key.fromMe || await isSudo(senderId);
         if (!isOwner) return sock.sendMessage(chatId, { text: '❌ Only owner can use this command.' }, { quoted: message });
         const text = userMessage.replace(/^\.setpackname\s*/i, '').trim();
         if (!text) {
-            const current = getConfig('STICKER_PACK') || '(not set)';
+            const current = getSessionSetting(botJid, 'STICKER_PACK') || '(not set)';
             return sock.sendMessage(chatId, { text: `📦 *Sticker Pack Name*\n\n_Current:_ ${current}\n\nUsage: *.setpackname <name>*` }, { quoted: message });
         }
-        setConfig('STICKER_PACK', text);
+        await setSessionSetting(botJid, 'STICKER_PACK', text);
         global.packname = text;
         return sock.sendMessage(chatId, { text: `✅ Sticker pack name set to: *${text}*` }, { quoted: message });
     } catch (err) {

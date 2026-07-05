@@ -1,4 +1,4 @@
-const { setConfig, getConfig } = require('../lib/configdb.js');
+const { getBotName: getSessionBotName, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
 
 // Default bot name
 const DEFAULT_BOT_NAME = 'TRUTH-MD';
@@ -6,43 +6,23 @@ const DEFAULT_BOT_NAME = 'TRUTH-MD';
 /**
  * Get bot name EXACTLY as saved
  */
-function getBotName() {
-    try {
-        const botName = getConfig('botName', DEFAULT_BOT_NAME);
-        return botName || DEFAULT_BOT_NAME;
-    } catch (error) {
-        console.error('Error reading bot name from configdb:', error);
-        return DEFAULT_BOT_NAME;
-    }
+function getBotName(botJid) {
+    return getSessionBotName(botJid);
 }
 
 /**
  * Store bot name EXACTLY as the user typed
  */
-function setBotName(newBotName) {
-    try {
-        if (!newBotName || newBotName.length > 20) return false;
-
-        setConfig('botName', newBotName);
-        return true;
-
-    } catch (error) {
-        console.error('Error saving bot name to configdb:', error);
-        return false;
-    }
+function setBotName(botJid, newBotName) {
+    if (!newBotName || newBotName.length > 20) return false;
+    return setSessionSetting(botJid, 'BOTNAME', newBotName);
 }
 
 /**
  * Reset bot name to default
  */
-function resetBotName() {
-    try {
-        setConfig('botName', DEFAULT_BOT_NAME);
-        return true;
-    } catch (error) {
-        console.error('Error resetting bot name in configdb:', error);
-        return false;
-    }
+function resetBotName(botJid) {
+    return deleteSessionSetting(botJid, 'BOTNAME');
 }
 
 /**
@@ -91,6 +71,7 @@ END:VCARD`
  * Handle the setbotname command
  */
 async function handleSetBotCommand(sock, chatId, senderId, message, userMessage, prefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
 
     // 🔥 RAW MESSAGE (uppercase preserved even if handler lowercased)
     const RAW = extractRawText(message);
@@ -120,7 +101,7 @@ async function handleSetBotCommand(sock, chatId, senderId, message, userMessage,
 
     // Reset (case-insensitive)
     if (newBotName.toLowerCase() === "reset") {
-        resetBotName();
+        resetBotName(botJid);
         await sock.sendMessage(chatId, {
             text: `🔄 Bot name reset to default: *${DEFAULT_BOT_NAME}*`
         }, { quoted: fake });
@@ -136,7 +117,7 @@ async function handleSetBotCommand(sock, chatId, senderId, message, userMessage,
     }
 
     // SAVE EXACT formatting
-    const ok = setBotName(newBotName);
+    const ok = setBotName(botJid, newBotName);
 
     await sock.sendMessage(chatId, {
         text: ok

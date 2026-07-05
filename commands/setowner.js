@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-// Path to store owner settings
-const OWNER_FILE = path.join(__dirname, '..', 'data', 'owner.json');
+const { getSessionSetting, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
 
 // Default owner name
 const DEFAULT_OWNER_NAME = 'Courtney';
@@ -22,14 +20,8 @@ if (!fs.existsSync(OWNER_FILE)) {
  * Get the current owner name
  * @returns {string} The current owner name
  */
-function getOwnerName() {
-    try {
-        const data = JSON.parse(fs.readFileSync(OWNER_FILE, 'utf8'));
-        return data.ownerName || DEFAULT_OWNER_NAME;
-    } catch (error) {
-        console.error('Error reading owner file:', error);
-        return DEFAULT_OWNER_NAME;
-    }
+function getOwnerName(botJid) {
+    return getSessionSetting(botJid, 'OWNERNAME', DEFAULT_OWNER_NAME);
 }
 
 /**
@@ -37,40 +29,21 @@ function getOwnerName() {
  * @param {string} newOwnerName - The new owner name to set
  * @returns {boolean} Success status
  */
-function setOwnerName(newOwnerName) {
-    try {
-        // Validate owner name
-        if (!newOwnerName || newOwnerName.length > 20) {
-            return false;
-        }
-        // Merge with existing data so ownerNumber is preserved
-        let existing = {};
-        try { existing = JSON.parse(fs.readFileSync(OWNER_FILE, 'utf8')); } catch (_) {}
-        const data = { ...existing, ownerName: newOwnerName };
-        fs.writeFileSync(OWNER_FILE, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error setting owner name:', error);
-        return false;
-    }
+function setOwnerName(botJid, newOwnerName) {
+    if (!newOwnerName || newOwnerName.length > 20) return false;
+    return setSessionSetting(botJid, 'OWNERNAME', newOwnerName);
 }
 
 /**
  * Reset owner name to default
  * @returns {boolean} Success status
  */
-function resetOwnerName() {
-    try {
-        const data = { ownerName: DEFAULT_OWNER_NAME };
-        fs.writeFileSync(OWNER_FILE, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error resetting owner name:', error);
-        return false;
-    }
+function resetOwnerName(botJid) {
+    return deleteSessionSetting(botJid, 'OWNERNAME');
 }
 
 async function handleSetOwnerCommand(sock, chatId, senderId, message, userMessage, currentPrefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const args = userMessage.split(' ').slice(1);
    const newOwnerName = args.join(' ');
     
@@ -113,7 +86,7 @@ function createFakeContact(message) {
 
     if (!newOwnerName) {
         // Show current owner name
-        const current = getOwnerName();
+        const current = getOwnerName(botJid);
         await sock.sendMessage(chatId, { 
             text: `👑 Current Owner Name: *${current}*\n\nUsage: ${currentPrefix}setowner <new_name>\nExample: ${currentPrefix}setowner Courtney\n\nTo reset: ${currentPrefix}setowner reset`,
             contextInfo: {
@@ -131,9 +104,9 @@ function createFakeContact(message) {
 
     if (newOwnerName.toLowerCase() === 'reset') {
         // Reset to default owner name
-        const success = resetOwnerName();
+        const success = resetOwnerName(botJid);
         if (success) {
-            const defaultOwnerName = getOwnerName();
+            const defaultOwnerName = getOwnerName(botJid);
             await sock.sendMessage(chatId, { 
                 text: `✅ Owner name reset to default: *${defaultOwnerName}*`,
                 contextInfo: {
@@ -180,7 +153,7 @@ function createFakeContact(message) {
         return;
     }
 
-    const success = setOwnerName(newOwnerName);
+    const success = setOwnerName(botJid, newOwnerName);
     if (success) {
         await sock.sendMessage(chatId, { 
             text: `✅ Owner name successfully set to: *${newOwnerName}*`,

@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-
-// Path to store owner settings
-const OWNER_FILE = path.join(__dirname, '..', 'data', 'owner.json');
+const { getSessionSetting, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
 
 // Default owner number — read from environment variable, never hardcoded
 const _envOwner = (process.env.OWNER_NUMBER || '').replace(/[^0-9]/g, '');
@@ -26,18 +24,13 @@ if (!fs.existsSync(OWNER_FILE)) {
  * Get the current owner number
  * @returns {string} The current owner number
  */
-function getOwnerNumber() {
-    try {
-        // Session-detected owner always takes priority (set on connect from sock.user.id)
-        if (global.OWNER_NUMBER) {
-            const gNum = global.OWNER_NUMBER.replace(/[^0-9]/g, '');
-            if (gNum) return gNum + '@s.whatsapp.net';
-        }
-        const data = JSON.parse(fs.readFileSync(OWNER_FILE, 'utf8'));
-        return data.ownerNumber || DEFAULT_OWNER_NUMBER || '';
-    } catch (error) {
-        return DEFAULT_OWNER_NUMBER || '';
-    }
+function getOwnerNumber(botJid) {
+    const val = getSessionSetting(botJid, 'OWNER_NUMBER');
+    if (val) return val.includes('@') ? val : val + '@s.whatsapp.net';
+    
+    // Fallback to global/env
+    if (global.OWNER_NUMBER) return global.OWNER_NUMBER.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+    return DEFAULT_OWNER_NUMBER || '';
 }
 
 /**
@@ -45,48 +38,18 @@ function getOwnerNumber() {
  * @param {string} newOwnerNumber - The new owner number to set
  * @returns {boolean} Success status
  */
-function setOwnerNumber(newOwnerNumber) {
-    try {
-        // Validate owner number format
-        if (!newOwnerNumber || !isValidWhatsAppNumber(newOwnerNumber)) {
-            return false;
-        }
-        
-        const data = JSON.parse(fs.readFileSync(OWNER_FILE, 'utf8'));
-        data.ownerNumber = newOwnerNumber;
-        fs.writeFileSync(OWNER_FILE, JSON.stringify(data, null, 2));
-
-        // Persist to configdb so the new owner survives restarts on ephemeral filesystems
-        try {
-            const { setConfig } = require('../lib/configdb');
-            const numOnly = newOwnerNumber.replace('@s.whatsapp.net', '');
-            setConfig('AUTO_OWNER_NUMBER', numOnly);
-        } catch (_) {}
-
-        // Keep global in sync immediately
-        try { global.OWNER_NUMBER = newOwnerNumber.replace('@s.whatsapp.net', ''); } catch (_) {}
-
-        return true;
-    } catch (error) {
-        console.error('Error setting owner number:', error);
-        return false;
-    }
+function setOwnerNumber(botJid, newOwnerNumber) {
+    if (!newOwnerNumber || !isValidWhatsAppNumber(newOwnerNumber)) return false;
+    const numOnly = newOwnerNumber.replace('@s.whatsapp.net', '');
+    return setSessionSetting(botJid, 'OWNER_NUMBER', numOnly);
 }
 
 /**
  * Reset owner number to default
  * @returns {boolean} Success status
  */
-function resetOwnerNumber() {
-    try {
-        const data = JSON.parse(fs.readFileSync(OWNER_FILE, 'utf8'));
-        data.ownerNumber = DEFAULT_OWNER_NUMBER;
-        fs.writeFileSync(OWNER_FILE, JSON.stringify(data, null, 2));
-        return true;
-    } catch (error) {
-        console.error('Error resetting owner number:', error);
-        return false;
-    }
+function resetOwnerNumber(botJid) {
+    return deleteSessionSetting(botJid, 'OWNER_NUMBER');
 }
 
 /**
@@ -119,8 +82,8 @@ function formatToJID(number) {
  * @param {string} userId - The user ID to check
  * @returns {boolean} Whether the user is owner
  */
-function isOwner(userId) {
-    const ownerNumber = getOwnerNumber();
+function isOwner(botJid, userId) {
+    const ownerNumber = getOwnerNumber(botJid);
     return userId === ownerNumber;
 }
 
@@ -143,13 +106,14 @@ function createFakeContact(message) {
 }
 
 async function handleSetOwnerNumberCommand(sock, chatId, senderId, message, userMessage, currentPrefix) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const args = userMessage.split(' ').slice(1);
     const inputNumber = args.join(' ').trim();
     
     const fake = createFakeContact(message);
     
     // Only current owner can change owner number
-    const currentOwnerNumber = getOwnerNumber();
+    const currentOwnerNumber = getOwnerNumber(botJid);
     if (senderId !== currentOwnerNumber && !message.key.fromMe) {
         await sock.sendMessage(chatId, { 
             text: '❌ Only the current owner can change the owner number!',
@@ -168,7 +132,7 @@ async function handleSetOwnerNumberCommand(sock, chatId, senderId, message, user
 
     if (!inputNumber) {
         // Show current owner number (masked for privacy)
-        const current = getOwnerNumber();
+        const current = getOwnerNumber(botJid);
         const maskedNumber = current.split('@')[0].replace(/(\d{3})\d+(\d{3})/, '$1****$2');
         
         await sock.sendMessage(chatId, { 
@@ -188,9 +152,9 @@ async function handleSetOwnerNumberCommand(sock, chatId, senderId, message, user
 
     if (inputNumber.toLowerCase() === 'reset') {
         // Reset to default owner number
-        const success = resetOwnerNumber();
+        const success = resetOwnerNumber(botJid);
         if (success) {
-            const defaultOwnerNumber = getOwnerNumber();
+            const defaultOwnerNumber = getOwnerNumber(botJid);
             const maskedDefault = defaultOwnerNumber.split('@')[0].replace(/(\d{3})\d+(\d{3})/, '$1****$2');
             
             await sock.sendMessage(chatId, { 
@@ -241,7 +205,7 @@ async function handleSetOwnerNumberCommand(sock, chatId, senderId, message, user
         return;
     }
 
-    const success = setOwnerNumber(formattedNumber);
+    const success = setOwnerNumber(botJid, formattedNumber);
     if (success) {
         const maskedNewNumber = formattedNumber.split('@')[0].replace(/(\d{3})\d+(\d{3})/, '$1****$2');
         

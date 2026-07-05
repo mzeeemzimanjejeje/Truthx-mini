@@ -76,6 +76,7 @@ function lazyCmdNamed(p) {
 
 const { tictactoeCommand, handleTicTacToeMove } = safeImport('./commands/tictactoe');
 const { getConfig } = require('./lib/configdb');
+const { getPrefix, getSessionSetting } = require('./lib/sessionSettings');
 
 /*━━━━━━━━━━━━━━━━━━━━*/
 // -----Command imports -Handlers
@@ -531,6 +532,7 @@ const _OWNER_CMD_SET = new Set([
 ]);
 
 async function handleMessages(sock, messageUpdate, printLog ) {
+    const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     try {
         const { messages, type } = messageUpdate;
         // 'notify' = inbound from others. 'append' = own messages synced from other devices.
@@ -663,15 +665,8 @@ async function handleMessages(sock, messageUpdate, printLog ) {
 
  /*━━━━━━━━━━━━━━━━━━━━*/
        // Dynamic prefix      
-        // Cached prefix read — avoids file/DB hit on every message
-        {
-            const _t = Date.now();
-            if (!_hotCache.prefix.v || _t - _hotCache.prefix.t > _hotCache.prefix.ttl) {
-                _hotCache.prefix.v = getPrefix();
-                _hotCache.prefix.t = _t;
-            }
-        }
-        const prefix = _hotCache.prefix.v;
+        // Per-session prefix read
+        const prefix = getPrefix(botJid);
 
         
         
@@ -692,8 +687,9 @@ async function handleMessages(sock, messageUpdate, printLog ) {
         }
         if (!senderIsSudo) {
             try {
-                // session-detected owner (global.OWNER_NUMBER) always wins; env var is fallback only
-                const _ownerNum = (global.OWNER_NUMBER || process.env.OWNER_NUMBER || '').replace(/[^0-9]/g,'');
+                // session-detected owner (per-bot OWNER_NUMBER) always wins; global/env is fallback
+                const _botOwner = getSessionSetting(botJid, 'OWNER_NUMBER');
+                const _ownerNum = (_botOwner || global.OWNER_NUMBER || process.env.OWNER_NUMBER || '').replace(/[^0-9]/g,'');
                 const _connNum = (sock && sock.user && sock.user.id ? sock.user.id.split(':')[0].split('@')[0] : '');
                 const _senderNum = resolvedSenderId.split('@')[0];
                 if (message.key.fromMe === true) senderIsSudo = true;
