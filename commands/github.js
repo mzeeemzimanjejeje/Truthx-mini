@@ -65,6 +65,15 @@ const pushname = message.pushName || "Unknown User";
                         newsletterJid: '120363409714698622@newsletter',
                         newsletterName: 'TRUTH-MD Official',
                         serverMessageId: -1
+                    },
+                    externalAdReply: {
+                        showAdAttribution: false,
+                        title: 'TRUTH-MD REPO',
+                        body: 'Official Repository',
+                        thumbnail: imgBuffer,
+                        sourceUrl: repoUrl,
+                        mediaType: 1,
+                        renderLargerThumbnail: true
                     }
                 }
             },{ quoted: fkontak });
@@ -93,7 +102,7 @@ const pushname = message.pushName || "Unknown User";
     txt += `@${pushname} Don't forget to fork and star my repo`;
 
     const repoImgPath = path.join(__dirname, '../assets/truth_repos.jpg');
-    console.log('[REPO] Checking image path:', repoImgPath); if (fs.existsSync(repoImgPath)) {
+    console.log('[REPO] Checking image path:', repoImgPath);     if (fs.existsSync(repoImgPath)) {
         const imgBuffer = fs.readFileSync(repoImgPath);
         await sock.sendMessage(chatId, {
             image: imgBuffer,
@@ -105,6 +114,15 @@ const pushname = message.pushName || "Unknown User";
                     newsletterJid: '120363409714698622@newsletter',
                     newsletterName: 'TRUTH-MD Official',
                     serverMessageId: -1
+                },
+                externalAdReply: {
+                    showAdAttribution: false,
+                    title: 'TRUTH-MD REPO',
+                    body: 'Official Repository',
+                    thumbnail: imgBuffer,
+                    sourceUrl: json.html_url,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
                 }
             }
         },{ quoted: fkontak });

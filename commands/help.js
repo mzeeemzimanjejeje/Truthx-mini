@@ -141,7 +141,7 @@ const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, pr
 
     // Setting Menu
     menu += `┏❐ 《 *SETTING MENU* 》 ❐\n`;
-    menu += `◆ .getsettings\n◆ .mode\n◆ .autostatus\n◆ .autoviewstatus\n◆ .pmblock\n◆ .setmention\n◆ .autoread\n◆ .clearsession\n◆ .antidelete\n◆ .cleartmp\n◆ .autoreact\n◆ .getpp\n◆ .setpp\n◆ .sudo\n◆ .autotyping\n◆ .alwaysonline\n◆ .autorecording\n◆ .autobio\n◆ .autolike\n◆ .autoview\n◆ .anticall\n◆ .antibug\n◆ .autofont\n◆ .autoblock\n◆ .antiedit\n◆ .antiviewonce\n◆ .autosavestatus\n◆ .autorecordtype\n◆ .statusantidelete\n◆ .autostatusreact\n◆ .setmenuimage\n◆ .changemenu style\n◆ .setprefix\n◆ .setownername\n◆ .setbotname\n◆ .setvar\n◆ .setwatermark\n◆ .setownernumber\n`;
+    menu += `◆ .getsettings\n◆ .mode\n◆ .autostatus\n◆ .autoviewstatus\n◆ .pmblock\n◆ .setmention\n◆ .autoread\n◆ .clearsession\n◆ .antidelete\n◆ .cleartmp\n◆ .autoreact\n◆ .getpp\n◆ .setpp\n◆ .sudo\n◆ .autotyping\n◆ .alwaysonline\n◆ .autorecording\n◆ .autobio\n◆ .autolike\n◆ .autoview\n◆ .anticall\n◆ .antibug\n◆ .autofont\n◆ .autoblock\n◆ .antiedit\n◆ .antiviewonce\n◆ .autosavestatus\n◆ .autorecordtype\n◆ .statusantidelete\n◆ .autostatusreact\n◆ .setmenuimage\n◆ .changemenu style\n◆ .setownername\n◆ .setbotname\n◆ .setvar\n◆ .setwatermark\n◆ .setownernumber\n`;
     menu += `┗❐\n${readmore}\n`;
 
     // Main Menu
@@ -236,98 +236,22 @@ async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thu
     const tylorkids = thumbnailBuffer;
     const plink = "https://github.com/Courtney250/TRUTH-MD";
 
-    if (menustyle === '4') {
-        await sock.sendMessage(chatId, {
-            document: {
-                url: "https://i.ibb.co/2W0H9Jq/avatar-contact.png",
+    // Defaulting all styles to style 1 (Image with Caption) to ensure profile picture always shows
+    await sock.sendMessage(chatId, {
+        image: tylorkids,
+        caption: menulist,
+        contextInfo: {
+            externalAdReply: {
+                showAdAttribution: false,
+                title: botname,
+                body: ownername,
+                thumbnail: tylorkids,
+                sourceUrl: plink,
+                mediaType: 1,
+                renderLargerThumbnail: true,
             },
-            caption: menulist,
-            mimetype: "application/zip",
-            fileName: `${botname}`,
-            fileLength: "9999999",
-            contextInfo: {
-                externalAdReply: {
-                    showAdAttribution: false,
-                    title: "",
-                    body: "",
-                    thumbnail: tylorkids,
-                    sourceUrl: plink,
-                    mediaType: 1,
-                    renderLargerThumbnail: true,
-                },
-            },
-        }, { quoted: fkontak });
-    } else if (menustyle === '2') {
-        await sock.sendMessage(chatId, { 
-            text: menulist 
-        }, { quoted: fkontak });
-    } else if (menustyle === '3') {
-        await sock.sendMessage(chatId, {
-            text: menulist,
-            contextInfo: {
-                externalAdReply: {
-                    showAdAttribution: false,
-                    title: botname,
-                    body: ownername,
-                    thumbnail: tylorkids,
-                    sourceUrl: plink,
-                    mediaType: 1,
-                    renderLargerThumbnail: true,
-                },
-            },
-        }, { quoted: fkontak });
-    } else if (menustyle === '1') {
-        await sock.sendMessage(chatId, {
-            image: tylorkids,
-            caption: menulist,
-        }, { quoted: fkontak });
-    } else if (menustyle === '5') {
-        let massage = generateWAMessageFromContent(chatId, {
-            viewOnceMessage: {
-                message: {
-                    interactiveMessage: {
-                        body: {
-                            text: null,            
-                        },
-                        footer: {
-                            text: menulist, 
-                        },
-                        nativeFlowMessage: {
-                            buttons: [{
-                                text: null
-                            }], 
-                        },
-                    },
-                },
-            },
-        }, { quoted: fkontak });
-        await sock.relayMessage(chatId, massage.message, { messageId: massage.key.id });
-    } else if (menustyle === '6') {
-        await sock.relayMessage(chatId, {
-            requestPaymentMessage: {
-                currencyCodeIso4217: 'USD',
-                requestFrom: '0@s.whatsapp.net',
-                amount1000: '1',
-                noteMessage: {
-                    extendedTextMessage: {
-                        text: menulist,
-                        contextInfo: {
-                            mentionedJid: [message.key.participant || message.key.remoteJid],
-                            externalAdReply: {
-                                showAdAttribution: false,
-                                thumbnail: tylorkids,
-                            },
-                        },
-                    },
-                },
-            },
-        }, {});
-    } else {
-        // Default fallback
-        await sock.sendMessage(chatId, { 
-            text: menulist 
-        }, { quoted: fkontak });
-    }
+        },
+    }, { quoted: fkontak });
 }
 
 // Main help command function

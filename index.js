@@ -2505,7 +2505,7 @@ async function startXeonBotInc() {
                 try { await XeonBotInc.sendPresenceUpdate('available'); } catch (_) {}
 
                 // Fire-and-forget — never block the event pipeline waiting for sendMessage
-                sendWelcomeMessage(XeonBotInc).catch(e => log(`Welcome msg error: ${e.message}`, 'yellow'));
+                // sendWelcomeMessage(XeonBotInc).catch(e => log(`Welcome msg error: ${e.message}`, 'yellow'));
                 try {
                     const { startUpdateNotifier } = require('./commands/updatecheck');
                     startUpdateNotifier(XeonBotInc);

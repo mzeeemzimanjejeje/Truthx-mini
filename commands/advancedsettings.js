@@ -165,14 +165,10 @@ async function setvarCommand(sock, chatId, senderId, message, userMessage, prefi
 ┃ 🔹️ - Current Status: ${getConfigValue('ANTIBOT', 'off')}
 ┃ 🔹️ - Usage: ${prefix}antibot off/warn/delete/kick
 ┃
-┃➽ *14. 《 Heart React 》*
-┃ 🔸️ - Current Status: ${getConfigValue('HEARTREACT', 'off')}
-┃ 🔸️ - Usage: ${prefix}heartreact on/off
-┃
-┃ *15. 《 Set Prefix 》*
-┃ 🔹️ - Current Prefix: ${prefix}
-┃ 🔹️ - Usage: ${prefix}setprefix <new_prefix>
-┗❐                      
+	┃➽ *14. 《 Heart React 》*
+	┃ 🔸️ - Current Status: ${getConfigValue('HEARTREACT', 'off')}
+	┃ 🔸️ - Usage: ${prefix}heartreact on/off
+	┗❐                      
 
 📌 *Note*: Replace \`"on/off"\` with the desired state to enable or disable a feature.
 `;

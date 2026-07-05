@@ -62,6 +62,15 @@ async function forkCommand(sock, chatId, message) {
                     newsletterJid: '120363409714698622@newsletter',
                     newsletterName: 'TRUTH-MD Official',
                     serverMessageId: -1
+                },
+                externalAdReply: {
+                    showAdAttribution: false,
+                    title: 'TRUTH-MD FORK',
+                    body: 'Click to fork the repo',
+                    thumbnail: forkImg,
+                    sourceUrl: forkUrl,
+                    mediaType: 1,
+                    renderLargerThumbnail: true
                 }
               }}
             : { text: txt, contextInfo: {
