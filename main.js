@@ -540,6 +540,9 @@ async function handleMessages(sock, messageUpdate, printLog ) {
         }
 
         const message = messages[0];
+
+        const isGroup = message.key.remoteJid.endsWith('@g.us');
+        const isChannel = message.key.remoteJid.endsWith('@newsletter');
         if (!message?.message) {
             return;
         }
@@ -670,8 +673,8 @@ async function handleMessages(sock, messageUpdate, printLog ) {
         }
         const prefix = _hotCache.prefix.v;
 
-        const isGroup = chatId.endsWith('@g.us');
-        const isChannel = chatId.endsWith('@newsletter');
+        
+        
         const resolvedSenderId = resolveToPhoneJid(senderId);
         // [FIXED] owner always access
         // Cached isSudo — avoids file/DB hit on every message (20s TTL)
