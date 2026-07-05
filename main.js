@@ -2075,6 +2075,7 @@ case userMessage === `${prefix}resetgoodbye`:
             case userMessage === `${prefix}sc`:
             case userMessage === `${prefix}script`:
             case userMessage === `${prefix}repo`:
+                console.log(`[CMD] Executing repo command for ${chatId}`);
                 await githubCommand(sock, chatId, message);
                 break;
             case userMessage === `${prefix}fork`:
