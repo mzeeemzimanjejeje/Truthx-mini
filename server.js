@@ -1,3 +1,4 @@
+console.log("[SERVER] server.js starting...");
 require('dotenv').config();
 const express = require('express');
 const http    = require('http');
@@ -149,3 +150,4 @@ process.on('uncaughtException',  err => console.error('[UNCAUGHT]', err.message)
 process.on('unhandledRejection', err => console.error('[REJECTION]', err?.message || err));
 
 module.exports = app;
+getSessionManager();
