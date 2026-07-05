@@ -5,7 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TRUTH-MD | WhatsApp Pairing</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js">
+    const deleteBtn = document.getElementById('delete-btn');
+    
+    deleteBtn.addEventListener('click', async () => {
+      const num = phoneInput.value.replace(/\D/g,'');
+      if (!num) { swal('Error', 'Please enter your WhatsApp number to delete its session.', 'error'); return; }
+      
+      const confirm = await swal({
+        title: "Are you sure?",
+        text: `This will delete the session for ${num} from the database and local storage.`,
+        icon: "warning",
+        buttons: true,
+        dangerMode: true,
+      });
+      
+      if (confirm) {
+        deleteBtn.disabled = true;
+        try {
+          const res = await fetch('/api/delete-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ number: num })
+          });
+          const d = await res.json();
+          if (d.success) {
+            swal('Deleted!', d.message, 'success');
+          } else {
+            swal('Error', d.error || 'Failed to delete session.', 'error');
+          }
+        } catch (e) {
+          swal('Error', 'Network error occurred.', 'error');
+        } finally {
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+  </script>
   <style>
     :root {
       --bg: #0a0a0a;
@@ -87,7 +124,10 @@
       <input type="text" id="phone-number" placeholder="+254XXXXXXXXX">
     </div>
     
+    
     <button id="gen-btn" class="btn">Generate Pairing Code</button>
+    <button id="delete-btn" class="btn" style="background:var(--secondary); margin-top:10px; font-size:0.85rem;">Delete Existing Session</button>
+
     
     <div id="loading" class="loading">
       <i class="fas fa-circle-notch"></i>
@@ -175,6 +215,43 @@
       let v = this.value.replace(/\D/g,'');
       this.value = v ? '+' + v : '';
     });
+  
+    const deleteBtn = document.getElementById('delete-btn');
+    
+    deleteBtn.addEventListener('click', async () => {
+      const num = phoneInput.value.replace(/\D/g,'');
+      if (!num) { swal('Error', 'Please enter your WhatsApp number to delete its session.', 'error'); return; }
+      
+      const confirm = await swal({
+        title: "Are you sure?",
+        text: `This will delete the session for ${num} from the database and local storage.`,
+        icon: "warning",
+        buttons: true,
+        dangerMode: true,
+      });
+      
+      if (confirm) {
+        deleteBtn.disabled = true;
+        try {
+          const res = await fetch('/api/delete-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ number: num })
+          });
+          const d = await res.json();
+          if (d.success) {
+            swal('Deleted!', d.message, 'success');
+          } else {
+            swal('Error', d.error || 'Failed to delete session.', 'error');
+          }
+        } catch (e) {
+          swal('Error', 'Network error occurred.', 'error');
+        } finally {
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
   </script>
 </body>
 </html>

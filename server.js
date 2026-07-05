@@ -130,6 +130,21 @@ app.get('/api/pair-status/:sessionId', (req, res) => {
   res.json({ status: info.status, name: info.name || null, connectedAt: info.connectedAt || null });
 });
 
+
+app.post('/api/delete-session', async (req, res) => {
+  const { number } = req.body || {};
+  if (!number) return res.status(400).json({ error: 'Phone number required' });
+  
+  const cleanNumber = number.replace(/\D/g, '');
+  const sm = getSessionManager();
+  
+  // Try to find the session ID for this number
+  // In this bot, sessionId is often the same as the phone number
+  await sm.destroySession(cleanNumber);
+  
+  res.json({ success: true, message: `Session for ${cleanNumber} deleted.` });
+});
+
 app.post('/api/disconnect', async (req, res) => {
   const { sessionId } = req.body || {};
   if (!sessionId) return res.status(400).json({ error: 'Session ID required' });
