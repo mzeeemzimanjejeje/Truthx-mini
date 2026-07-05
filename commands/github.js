@@ -93,7 +93,7 @@ const pushname = message.pushName || "Unknown User";
     txt += `@${pushname} Don't forget to fork and star my repo`;
 
     const repoImgPath = path.join(__dirname, '../assets/truth_repos.jpg');
-    if (fs.existsSync(repoImgPath)) {
+    console.log('[REPO] Checking image path:', repoImgPath); if (fs.existsSync(repoImgPath)) {
         const imgBuffer = fs.readFileSync(repoImgPath);
         await sock.sendMessage(chatId, {
             image: imgBuffer,
