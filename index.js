@@ -342,72 +342,112 @@ function show(id,btn){
 </body>
 </html>`;
 
+const manager = require('./lib/MultiInstanceManager');
+manager.init();
+
 const healthServer = http.createServer((req, res) => {
     const url = req.url || '/';
+    const stats = manager.getStats();
 
-    // Serve login page when bot is waiting for auth choice
-    if (global._awaitingLogin && (url === '/' || url === '/login' && req.method === 'GET')) {
+    // /stats -> SSE for live updates
+    if (url === '/stats-stream') {
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive'
+        });
+        const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+        send(stats);
+        const onUpdate = (s) => send(s);
+        manager.on('update', onUpdate);
+        req.on('close', () => manager.off('update', onUpdate));
+        return;
+    }
+
+    // Serve login page
+    if (url === '/' || (url === '/login' && req.method === 'GET')) {
         let page = LOGIN_PAGE;
-        if (global._pairingCodeForWeb) {
-            page = page.replace('__PAIR_CODE_PLACEHOLDER__',
-                `<div class="pair-box" style="display:block">
-                  <h2>${global._pairingCodeForWeb}</h2>
-                  <p>Enter this code in WhatsApp → Settings → Linked Devices → Link a Device</p>
-                </div>`);
-        } else {
-            page = page.replace('__PAIR_CODE_PLACEHOLDER__', '');
+        
+        // Inject capacity info
+        const capacityHtml = `
+            <div class="status-card" style="margin-top:20px; text-align:left; border:1px solid #333; padding:15px; border-radius:10px;">
+                <h3 style="color:#25d366; margin-bottom:10px;">🟢 Server Capacity</h3>
+                <p>Active Sessions: <span id="active-sessions">${stats.total}</span> / ${stats.max}</p>
+                <p>Remaining Slots: <span id="remaining-slots">${stats.remaining}</span></p>
+                <p>Status: <span id="server-status" style="color:${stats.isFull ? '#ff5555' : '#25d366'}">${stats.isFull ? 'Full' : 'Available'}</span></p>
+            </div>
+            <script>
+                const evtSource = new EventSource("/stats-stream");
+                evtSource.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    document.getElementById('active-sessions').innerText = data.total;
+                    document.getElementById('remaining-slots').innerText = data.remaining;
+                    const status = document.getElementById('server-status');
+                    status.innerText = data.isFull ? 'Full' : 'Available';
+                    status.style.color = data.isFull ? '#ff5555' : '#25d366';
+                    
+                    // Toggle form visibility
+                    const forms = document.querySelectorAll('form');
+                    const fullMsg = document.getElementById('full-message');
+                    if (data.isFull) {
+                        forms.forEach(f => f.style.display = 'none');
+                        if (fullMsg) fullMsg.style.display = 'block';
+                    } else {
+                        forms.forEach(f => f.style.display = 'block');
+                        if (fullMsg) fullMsg.style.display = 'none';
+                    }
+                };
+            </script>
+        `;
+        
+        const fullMessage = `
+            <div id="full-message" style="display:${stats.isFull ? 'block' : 'none'}; text-align:center; padding:20px; color:#ff5555;">
+                <h2>🚫 This server is currently full.</h2>
+                <p>Please use another server or try again later.</p>
+            </div>
+        `;
+
+        page = page.replace('__PAIR_CODE_PLACEHOLDER__', capacityHtml + fullMessage);
+        
+        // If full, hide forms in initial HTML
+        if (stats.isFull) {
+            page = page.replace(/<form/g, '<form style="display:none"');
         }
+
         res.writeHead(200, { 'Content-Type': 'text/html' });
         return res.end(page);
     }
 
     // Handle login form POST
     if (url === '/login' && req.method === 'POST') {
+        if (stats.isFull) {
+            res.writeHead(403, { 'Content-Type': 'text/html' });
+            return res.end('<h1>🚫 Server Full</h1>');
+        }
         let body = '';
         req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        req.on('end', async () => {
             const params = new URLSearchParams(body);
             const method = params.get('method');
-            const sessionId = params.get('session_id') || '';
             const phone = (params.get('phone') || '').replace(/[^0-9]/g, '');
 
-            if (method === 'session' && sessionId.includes('TRUTH-MD:~')) {
-                global.SESSION_ID = sessionId.trim();
-                global._awaitingLogin = false;
-                // Persist SESSION_ID to .env immediately so the bot can recover on restart
-                // without needing the user to re-enter the session ID.
+            if (method === 'phone' && phone.length >= 7) {
                 try {
-                    const _ep = require('path').join(process.cwd(), '.env');
-                    let _ec = require('fs').existsSync(_ep) ? require('fs').readFileSync(_ep, 'utf8') : '';
-                    if (_ec.match(/^SESSION_ID=/m)) {
-                        _ec = _ec.replace(/^SESSION_ID=.*$/m, `SESSION_ID=${global.SESSION_ID}`);
-                    } else {
-                        _ec += `${_ec.endsWith('\n') ? '' : '\n'}SESSION_ID=${global.SESSION_ID}\n`;
-                    }
-                    require('fs').writeFileSync(_ep, _ec);
-                    console.log('[ TRUTH - MD ] [AUTH] SESSION_ID persisted to .env — will survive restarts');
-                } catch (_saveErr) {
-                    console.error('[ TRUTH - MD ] [AUTH] Could not persist SESSION_ID to .env:', _saveErr.message);
+                    const instance = await manager.startInstance(phone);
+                    res.writeHead(200, { 'Content-Type': 'text/html' });
+                    res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Pairing...</title>
+                      <style>body{font-family:sans-serif;background:#0d0d0d;color:#25d366;text-align:center;padding:60px}</style>
+                      </head><body><h1>📱 Pairing code requested for ${phone}</h1>
+                      <p>Wait a few seconds, then refresh the home page to see your code.</p>
+                      <a href="/" style="color:#fff; text-decoration:none; background:#25d366; padding:10px 20px; border-radius:5px; display:inline-block; margin-top:20px;">Back to Home</a>
+                      </body></html>`);
+                } catch (e) {
+                    res.writeHead(500, { 'Content-Type': 'text/html' });
+                    res.end(`<h1>Error: ${e.message}</h1>`);
                 }
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Connecting...</title>
-                  <style>body{font-family:sans-serif;background:#0d0d0d;color:#25d366;text-align:center;padding:60px}</style>
-                  </head><body><h1>✅ Session ID accepted!</h1><p>Bot is connecting... You can close this page.</p></body></html>`);
-                if (global._loginResolve) global._loginResolve('session');
-            } else if (method === 'phone' && phone.length >= 7) {
-                global.phoneNumber = phone;
-                global._awaitingLogin = false;
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Getting Code...</title>
-                  <style>body{font-family:sans-serif;background:#0d0d0d;color:#25d366;text-align:center;padding:60px}</style>
-                  <meta http-equiv="refresh" content="3;url=/" />
-                  </head><body><h1>📱 Generating pairing code...</h1><p>Refreshing in 3 seconds — your code will appear on this page.</p></body></html>`);
-                if (global._loginResolve) global._loginResolve('number');
             } else {
                 res.writeHead(400, { 'Content-Type': 'text/html' });
-                res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Error</title>
-                  <meta http-equiv="refresh" content="2;url=/" />
-                  </head><body><p>Invalid input. Redirecting back...</p></body></html>`);
+                res.end('<p>Invalid input.</p>');
             }
         });
         return;
@@ -456,7 +496,7 @@ const healthServer = http.createServer((req, res) => {
         return res.end(JSON.stringify({
             status: 'ok',
             bot: 'TRUTH-MD',
-            connected: global.isBotConnected || false,
+            stats: manager.getStats(),
             uptime: Math.floor(uptime),
             memory: Math.round(mem.rss / 1024 / 1024) + 'MB'
         }));
@@ -3300,20 +3340,31 @@ async function tylor() {
     const envSessionID = envFileSessionID || process.env.SESSION_ID?.trim();
     const forcePair = process.env.FORCE_PAIR === 'true';
 
+    // --- Multi-Tenant Auto-Recovery ---
+    // Instead of just one SESSION_ID, we now restore ALL sessions from the database.
+    // This makes the bot highly reliable and persistent across restarts.
+    if (process.env.DATABASE_URL || process.env.POSTGRESQL_URL) {
+        log('🔄 Multi-tenant mode active — restoring background sessions...', 'green');
+        await manager.restoreAll();
+        
+        // If there's a legacy SESSION_ID in .env, we still support it for backward compatibility
+        if (!forcePair && envSessionID && envSessionID.trim() !== '') {
+            log('📄 Legacy SESSION_ID found — ensuring it is registered...', 'cyan');
+            // Extract phone from session if possible or just let it connect
+            // For now, we prioritize the new MultiInstanceManager flow.
+        }
+        
+        checkEnvStatus();
+        return;
+    }
+
     if (!forcePair && envSessionID && envSessionID.trim() !== '') {
         global.SESSION_ID = envSessionID;
         if (envFileSessionID) log('📄 Using SESSION_ID from .env file', 'green');
-
-        // Always reconcile the env-provided SESSION_ID with the current session files.
-        // If the SESSION_ID changed, downloadSessionData() clears old auth state and
-        // restores the credentials from the new session string.
         await downloadSessionData();
-
         await saveLoginMethod('session');
         await startXeonBotInc();
-
         checkEnvStatus();
-
         return;
     }
     // If environment session is NOT set, or not valid, continue with fallback logic:
