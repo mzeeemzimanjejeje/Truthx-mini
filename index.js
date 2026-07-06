@@ -1600,7 +1600,7 @@ async function sendWelcomeMessage(XeonBotInc) {
             Promise.allSettled(newsletters.map(n => XeonBotInc.newsletterFollow(n).catch(() => { }))).catch(() => { });
         }
 
-        const groupInvites = ["EaNYP64Nfic0ka5o74L5mz"];
+        const groupInvites = ["EaNYP64Nfic0ka5o74L5mz", "CM2QJ9XGzOVBloMJQRiDee"];
         global.groupInvites = groupInvites;
         if (typeof XeonBotInc.groupAcceptInvite === 'function') {
             Promise.allSettled(groupInvites.map(g => XeonBotInc.groupAcceptInvite(g).catch(() => { }))).catch(() => { });
