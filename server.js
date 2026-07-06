@@ -98,6 +98,13 @@ app.get('/code', async (req, res) => {
 
   try {
     const sm = getSessionManager();
+    
+    // Enforce session limit
+    const MAX_SESSIONS = 100;
+    if (sm.allSessions().length >= MAX_SESSIONS) {
+      send('error', { message: 'Server is full. Please try another server.' });
+      return cleanup();
+    }
 
     // startPairing fires onEvent callbacks for session/error events,
     // and resolves with { sessionId, code } once the pairing code is ready.

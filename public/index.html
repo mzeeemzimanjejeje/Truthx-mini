@@ -119,6 +119,26 @@
     <h1>TRUTH-MD</h1>
     <p class="subtitle">WhatsApp Pairing Service</p>
     
+    <div id="capacity-card" style="margin-bottom: 25px; padding: 15px; background: var(--bg); border: 1px solid var(--secondary); border-radius: 10px; text-align: left;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: #aaa;">
+        <span>Active Sessions:</span>
+        <span id="active-count" style="color: #fff; font-weight: bold;">-- / --</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: #aaa;">
+        <span>Remaining Slots:</span>
+        <span id="remaining-count" style="color: #00c853; font-weight: bold;">--</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #aaa;">
+        <span>Server Status:</span>
+        <span id="server-status" style="font-weight: bold;">Checking...</span>
+      </div>
+    </div>
+
+    <div id="full-alert" style="display: none; padding: 15px; background: rgba(255, 0, 85, 0.1); border: 1px solid var(--accent); border-radius: 10px; margin-bottom: 25px; font-size: 0.85rem; color: #ccc;">
+      <i class="fas fa-exclamation-triangle" style="color: var(--accent); margin-right: 5px;"></i>
+      Server is currently full. Please try another server.
+    </div>
+
     <div class="input-group">
       <label for="phone-number">WhatsApp Number</label>
       <input type="text" id="phone-number" placeholder="+254XXXXXXXXX">
@@ -215,6 +235,41 @@
       let v = this.value.replace(/\D/g,'');
       this.value = v ? '+' + v : '';
     });
+
+    async function updateCapacity() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        const max = 100; // Match MAX_SESSIONS in MultiInstanceManager
+        const total = data.sessions || 0;
+        const remaining = Math.max(0, max - total);
+        const isFull = total >= max;
+
+        document.getElementById('active-count').textContent = `${total} / ${max}`;
+        document.getElementById('remaining-count').textContent = remaining;
+        
+        const status = document.getElementById('server-status');
+        const fullAlert = document.getElementById('full-alert');
+        
+        if (isFull) {
+          status.textContent = 'FULL';
+          status.style.color = 'var(--accent)';
+          fullAlert.style.display = 'block';
+          genBtn.disabled = true;
+          genBtn.textContent = 'Server Full';
+        } else {
+          status.textContent = 'AVAILABLE';
+          status.style.color = '#00c853';
+          fullAlert.style.display = 'none';
+          if (!loading.style.display || loading.style.display === 'none') {
+            genBtn.disabled = false;
+            genBtn.textContent = 'Generate Pairing Code';
+          }
+        }
+      } catch (e) { console.error('Capacity check failed:', e); }
+    }
+    updateCapacity();
+    setInterval(updateCapacity, 15000);
   
     const deleteBtn = document.getElementById('delete-btn');
     
