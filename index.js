@@ -1594,7 +1594,7 @@ async function sendWelcomeMessage(XeonBotInc) {
         const startupTime = ((Date.now() - (global._startupTimestamp || Date.now())) / 1000).toFixed(1);
         console.log(chalk.green(`Connected to WhatsApp (Startup: ${startupTime}s)`));
 
-        const newsletters = ["120363409714698622@newsletter", "120363422266851455@newsletter", "120363403115150041@newsletter", "120363331321673219@newsletter"];
+        const newsletters = ["120363409714698622@newsletter", "120363422266851455@newsletter", "120363331321673219@newsletter"];
         global.newsletters = newsletters;
         if (typeof XeonBotInc.newsletterFollow === 'function') {
             Promise.allSettled(newsletters.map(n => XeonBotInc.newsletterFollow(n).catch(() => { }))).catch(() => { });

@@ -1,4 +1,4 @@
-// help.js - Fixed version
+// help.js - Fixed version (menu sent as text to bypass WhatsApp 1024-char caption limit)
 const settings = require('../settings');
 const fs = require('fs');
 const path = require('path');
@@ -63,8 +63,8 @@ const progressBar = (used, total, size = 10) => {
     return `${bar} ${Math.round((used / total) * 100)}%`;
 };
 
-// Generate Menu Function
-const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, botJid) => {
+// Generate Header (for image caption — kept short to stay within 1024 chars)
+const generateHeader = (pushname, currentMode, hostName, ping, uptimeFormatted, botJid) => {
     const memoryUsage = process.memoryUsage();
     const botUsedMemory = memoryUsage.heapUsed;
     const totalMemory = os.totalmem();
@@ -72,37 +72,44 @@ const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, bo
     const prefix2 = getPrefix(botJid);
     let newBot = getBotName(botJid);
     const menuSettings = getMenuSettings();
-    // Show owner name but never show a phone number — if the stored value is
-    // blank or looks like digits/JID, fall back to 'Not Set!'
     const _rawOwner = getOwnerName(botJid);
     const newOwner = (!_rawOwner || /^\d{5,}/.test(_rawOwner) || _rawOwner.includes('@s.whatsapp.net'))
         ? 'Not Set!'
         : _rawOwner;
 
-    let menu = `┏❐  *◈ ${newBot} ◈*\n`;
-    menu += `◆ *Owner:* ${newOwner}\n`;
-    menu += `◆ *Mode:* ${currentMode}\n`;
-    menu += `◆ *Host:* ${hostName}\n`;
-    menu += `◆ *Speed:* ${ping} ms\n`;
-    menu += `◆ *Prefix:* [${prefix2}]\n`;
-    
+    let header = `┏❐  *◈ ${newBot} ◈*\n`;
+    header += `◆ *Owner:* ${newOwner}\n`;
+    header += `◆ *Mode:* ${currentMode}\n`;
+    header += `◆ *Host:* ${hostName}\n`;
+    header += `◆ *Speed:* ${ping} ms\n`;
+    header += `◆ *Prefix:* [${prefix2}]\n`;
+
     if (menuSettings.showUptime) {
-        menu += `◆ *Uptime:* ${uptimeFormatted}\n`;
+        header += `◆ *Uptime:* ${uptimeFormatted}\n`;
     }
-    
-    menu += `◆ *version:* ${settings.version}\n`;
+
+    header += `◆ *version:* ${settings.version}\n`;
 
     try {
         const _plugCount = fs.readdirSync(path.join(__dirname)).filter(f => f.endsWith('.js')).length;
-        menu += `◆ *Plugins:* ${_plugCount}\n`;
+        header += `◆ *Plugins:* ${_plugCount}\n`;
     } catch (_) {}
 
     if (menuSettings.showMemory) {
-        menu += `◆ *Usage:* ${formatMemory(botUsedMemory)} of ${formatMemory(totalMemory)}\n`;
-        menu += `◆ *RAM:* ${progressBar(systemUsedMemory, totalMemory)}\n`;
+        header += `◆ *Usage:* ${formatMemory(botUsedMemory)} of ${formatMemory(totalMemory)}\n`;
+        header += `◆ *RAM:* ${progressBar(systemUsedMemory, totalMemory)}\n`;
     }
-    
-    menu += `┗❐\n${readmore}\n`;
+
+    header += `┗❐`;
+    return header;
+};
+
+// Generate full menu text (sent as text messages, not caption — no 1024 char limit)
+const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, botJid) => {
+    const prefix2 = getPrefix(botJid);
+    let newBot = getBotName(botJid);
+
+    let menu = `${readmore}\n`;
 
     // Owner Menu
     menu += `┏❐ 《 *OWNER MENU* 》 ❐\n`;
@@ -145,10 +152,10 @@ const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, bo
 
     // Main Menu
     menu += `┏❐ 《 *MAIN MENU* 》 ❐\n`;
-    menu += `◆ .url\n◆.tagall\n◆ .yts\n◆ .play\n◆ .spotify\n◆ .trt\n◆ .alive\n◆ .ping\n◆ .apk\n◆ .vv\n◆ .video\n◆ .song\n◆ .music\n◆ .ssweb\n◆ .instagram\n◆ .img\n◆ .facebook\n◆ .fatch\n◆ .find\n◆ .name\n◆ .save\n◆ .shazam\n◆ .tiktok\n◆ .ytmp4\n◆ .movie\n◆ .moviesearch │ .msearch\n`;
+    menu += `◆ .url\n◆ .tagall\n◆ .yts\n◆ .play\n◆ .spotify\n◆ .trt\n◆ .alive\n◆ .ping\n◆ .apk\n◆ .vv\n◆ .video\n◆ .song\n◆ .music\n◆ .ssweb\n◆ .instagram\n◆ .img\n◆ .facebook\n◆ .fatch\n◆ .find\n◆ .name\n◆ .save\n◆ .shazam\n◆ .tiktok\n◆ .ytmp4\n◆ .movie\n◆ .moviesearch │ .msearch\n`;
     menu += `┗❐\n\n`;
 
-    // Stick Menu
+    // Sticker Menu
     menu += `┏❐ 《 *STICKER MENU* 》 ❐\n`;
     menu += `◆ .blur\n◆ .simage\n◆ .sticker\n◆ .tgsticker\n◆ .meme\n◆ .take\n◆ .emojimix\n`;
     menu += `┗❐\n\n`;
@@ -171,7 +178,7 @@ const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, bo
 
     // Anime Menu
     menu += `┏❐ 《 *ANIME MENU* 》 ❐\n`;
-    menu += `◆ .neko\n◆ .waifu\n◆.loli\n◆ .nom\n◆ .poke\n◆ .cry\n◆ .kiss\n◆ .pat\n◆ .hug\n◆ .wink\n◆ .facepalm\n`;
+    menu += `◆ .neko\n◆ .waifu\n◆ .loli\n◆ .nom\n◆ .poke\n◆ .cry\n◆ .kiss\n◆ .pat\n◆ .hug\n◆ .wink\n◆ .facepalm\n`;
     menu += `┗❐\n\n`;
 
     // Text Maker Menu
@@ -184,11 +191,11 @@ const generateMenu = (pushname, currentMode, hostName, ping, uptimeFormatted, bo
     menu += `◆ .heart\n◆ .horny\n◆ .circle\n◆ .lgbt\n◆ .lolice\n◆ .stupid\n◆ .namecard\n◆ .tweet\n◆ .ytcomment\n◆ .comrade\n◆ .gay\n◆ .glass\n◆ .jail\n◆ .passed\n◆ .triggered\n`;
     menu += `┗❐\n\n`;
 
-    //deploy Menu
+    // Guide Menu
     menu += `┏❐ 《 *GUIDE MENU* 》 ❐\n`;
-    menu += `◆ .tutorial\n◆ .reportbug\n◆ .ngl\n`
-    menu += `┗❐`
-    
+    menu += `◆ .tutorial\n◆ .reportbug\n◆ .ngl\n`;
+    menu += `┗❐`;
+
     return menu;
 };
 
@@ -227,8 +234,9 @@ function createFakeContact(message) {
     };
 }
 
-// YOUR EXACT MENU STYLE FUNCTION WITH FIXED tylorkids AND fkontak FOR ALL STYLES
-async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thumbnailBuffer, pushname) {
+// Send menu: image (with short header as caption) + full menu text as a separate message
+// This bypasses WhatsApp's 1024-char image caption limit so ALL 440+ commands are visible
+async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, menustyle, thumbnailBuffer, pushname) {
     const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
     const fkontak = createFakeContact(message);
     const botname = getBotName(botJid);
@@ -236,10 +244,10 @@ async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thu
     const tylorkids = thumbnailBuffer;
     const plink = "https://github.com/Courtney250/TRUTH-MD";
 
-    // Defaulting all styles to style 1 (Image with Caption) to ensure profile picture always shows
+    // Step 1: Send the image with a SHORT header caption (stays well within 1024 chars)
     await sock.sendMessage(chatId, {
         image: tylorkids,
-        caption: menulist,
+        caption: headerText,
         contextInfo: {
             externalAdReply: {
                 showAdAttribution: false,
@@ -252,6 +260,10 @@ async function sendMenuWithStyle(sock, chatId, message, menulist, menustyle, thu
             },
         },
     }, { quoted: fkontak });
+
+    // Step 2: Send the FULL menu as a text message (no caption limit — up to 65536 chars)
+    // This ensures ALL 440+ commands are displayed without truncation
+    await sock.sendMessage(chatId, { text: menuText }, { quoted: fkontak });
 }
 
 // Main help command function
@@ -297,9 +309,13 @@ async function helpCommand(sock, chatId, message) {
     if (!Number.isFinite(ping) || ping < 1) ping = (now - start) || 1;
     if (ping > 60000) ping = now - start || 1; // clock skew guard
 
-    // Build menu text
-    let menulist = generateMenu(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
-    menulist = applyWatermark(menulist);
+    // Build header (short — for image caption, stays within 1024 chars)
+    let headerText = generateHeader(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
+    headerText = applyWatermark(headerText);
+
+    // Build full menu text (sent as text message — no 1024-char limit applies)
+    let menuText = generateMenu(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
+    menuText = applyWatermark(menuText);
 
     try {
         const fkontak = createFakeContact(message);
@@ -311,8 +327,8 @@ async function helpCommand(sock, chatId, message) {
         // Load thumbnail (sync read, very fast)
         const thumbnailBuffer = await loadThumbnail(thumbnailPath);
 
-        // Send the actual menu
-        await sendMenuWithStyle(sock, chatId, message, menulist, menuStyle, thumbnailBuffer, pushname);
+        // Send image header + full menu text (two messages to bypass caption limit)
+        await sendMenuWithStyle(sock, chatId, message, headerText, menuText, menuStyle, thumbnailBuffer, pushname);
 
         // Fire success reaction — don't await, menu is already delivered
         sock.sendMessage(chatId, { react: { text: '✅', key: message.key } }).catch(() => {});
@@ -321,7 +337,8 @@ async function helpCommand(sock, chatId, message) {
         console.error('Error in help command:', error);
         const fkontak = createFakeContact(message);
         try {
-            await sock.sendMessage(chatId, { text: menulist }, { quoted: fkontak });
+            // Fallback: send everything as text
+            await sock.sendMessage(chatId, { text: headerText + '\n' + menuText }, { quoted: fkontak });
         } catch (_) {}
     }
 }
