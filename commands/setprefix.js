@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { getPrefix, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
+const { getPrefix: getSessionPrefix, setSessionSetting, deleteSessionSetting } = require('../lib/sessionSettings');
 
 // Default prefix
 const DEFAULT_PREFIX = '.';
@@ -13,6 +13,7 @@ const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
+const PREFIX_FILE = path.join(dataDir, 'prefix.json');
 
 // Initialize prefix file if it doesn't exist
 if (!fs.existsSync(PREFIX_FILE)) {
@@ -25,8 +26,7 @@ if (!fs.existsSync(PREFIX_FILE)) {
  */
 function getPrefix() {
     try {
-        const data = JSON.parse(fs.readFileSync(PREFIX_FILE, 'utf8'));
-        return data.prefix === NO_PREFIX ? '' : (data.prefix || DEFAULT_PREFIX);
+        return DEFAULT_PREFIX;
     } catch (error) {
         console.error('Error reading prefix file:', error);
         return DEFAULT_PREFIX;
@@ -123,7 +123,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
 
     if (!newPrefix) {
         // Show current prefix
-        const current = getPrefix(botJid) || '.';
+        const current = getSessionPrefix(botJid) || '.';
         const displayPrefix = current === NO_PREFIX ? 'None (prefixless)' : current;
         await sock.sendMessage(chatId, { 
             text: `Use: ${current === NO_PREFIX ? 'command' : current + 'setprefix'} then put the prefix you want`,
@@ -144,7 +144,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
         // Reset to default prefix
         const success = await deleteSessionSetting(botJid, 'PREFIX');
         if (success) {
-            const defaultPrefix = getPrefix();
+            const defaultPrefix = DEFAULT_PREFIX;
             await sock.sendMessage(chatId, { 
                 text: `✅ Prefix reset to default: *${defaultPrefix}*`,
                 contextInfo: {

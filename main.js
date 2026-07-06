@@ -111,7 +111,6 @@ const {
 
 
  const {
-  getPrefix, 
   handleSetPrefixCommand 
   } = safeImport('./commands/setprefix');
 

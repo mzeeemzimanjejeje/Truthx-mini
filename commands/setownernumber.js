@@ -11,6 +11,7 @@ const dataDir = path.join(__dirname, '..', 'data');
 if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
 }
+const OWNER_FILE = path.join(dataDir, 'owner.json');
 
 // Initialize owner file if it doesn't exist
 if (!fs.existsSync(OWNER_FILE)) {
