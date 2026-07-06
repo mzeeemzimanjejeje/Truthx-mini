@@ -2271,6 +2271,7 @@ async function startXeonBotInc() {
 
                 if (isLogoutCode) {
                     // Genuine logout — safe to reset welcome flags so fresh session gets a notification
+                    global._everConnected = false;
                     global._welcomeSent = false;
                     global.connectionMessageSent = false;
                     global._lastConnectionNotif = 0;

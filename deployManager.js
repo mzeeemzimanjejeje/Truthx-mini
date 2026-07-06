@@ -107,6 +107,7 @@ class DeployManager {
                 deployedAt: Date.now(),
                 sessionDir: sessionDir,
                 isActive: true,
+                welcomeSent: true, // Initial welcome sent during initializeBot
                 userInfo: userInfo || {}
             });
 
@@ -211,8 +212,13 @@ class DeployManager {
                         connectionEstablished = true;
                         clearTimeout(connectionTimeout);
                         
-                        // Send welcome message
-                        this.sendDeploymentWelcome(botSocket, deploymentId);
+                        // Send welcome message only once per deployment session
+                        const deployment = this.deployedBots.get(deploymentId);
+                        if (!deployment || !deployment.welcomeSent) {
+                            this.sendDeploymentWelcome(botSocket, deploymentId);
+                            if (deployment) deployment.welcomeSent = true;
+                        }
+                        
                         resolve({ success: true, socket: botSocket });
                     } 
                     else if (connection === 'close') {
