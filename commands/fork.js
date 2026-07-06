@@ -59,7 +59,7 @@ async function forkCommand(sock, chatId, message) {
                 forwardingScore: 1,
                 isForwarded: false,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363409714698622@newsletter',
+                    newsletterJid: '',
                     newsletterName: 'TRUTH-MD Official',
                     serverMessageId: -1
                 },
@@ -77,7 +77,7 @@ async function forkCommand(sock, chatId, message) {
                 forwardingScore: 1,
                 isForwarded: false,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363409714698622@newsletter',
+                    newsletterJid: '',
                     newsletterName: 'TRUTH-MD Official',
                     serverMessageId: -1
                 }

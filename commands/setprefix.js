@@ -151,7 +151,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -164,7 +164,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -184,7 +184,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -197,7 +197,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -232,7 +232,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                 forwardingScore: 1,
                 isForwarded: false,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@',
+                    newsletterJid: '',
                     newsletterName: '',
                     serverMessageId: -1
                 }
@@ -245,7 +245,7 @@ async function handleSetPrefixCommand(sock, chatId, senderId, message, userMessa
                 forwardingScore: 1,
                 isForwarded: false,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@',
+                    newsletterJid: '',
                     newsletterName: '',
                     serverMessageId: -1
                 }

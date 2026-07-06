@@ -205,7 +205,7 @@ async function aliveCommand(sock, chatId, message) {
             forwardingScore: 99,
             remoteJid: 'status@broadcast',
             isForwarded: false,
-            forwardedNewsletterMessageInfo: { newsletterJid: '', newsletterName: ' MD', serverMessageId: -1 }
+            forwardedNewsletterMessageInfo: { newsletterJid: '', serverMessageId: -1 }
         };
 
         if (mediaMode === 'text') {
@@ -220,7 +220,7 @@ async function aliveCommand(sock, chatId, message) {
             audio: { url: 'https://files.catbox.moe/qpnk2b.mp3' },
             mimetype: 'audio/mp4',
             ptt: false,
-            contextInfo: { forwardingScore: 1, isForwarded: false, forwardedNewsletterMessageInfo: { newsletterJid: '', newsletterName: '', serverMessageId: -1 } }
+            contextInfo: { forwardingScore: 1, isForwarded: false, forwardedNewsletterMessageInfo: { newsletterJid: '', serverMessageId: -1 } }
         }, { quoted: fake });
 
     } catch (error) {

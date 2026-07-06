@@ -64,7 +64,7 @@ async function autoreadCommand(sock, chatId, message) {
                         forwardingScore: 1,
                         isForwarded: false,
                         forwardedNewsletterMessageInfo: {
-                            newsletterJid: 'newsletter',
+                            newsletterJid: '',
                             newsletterName: 'TRUTH MD',
                             serverMessageId: -1
                         }
@@ -87,7 +87,7 @@ async function autoreadCommand(sock, chatId, message) {
                 forwardingScore: 1,
                 isForwarded: false,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@newsletter',
+                    newsletterJid: '',
                     newsletterName: 'TRUTH MD',
                     serverMessageId: -1
                 }
@@ -102,7 +102,7 @@ async function autoreadCommand(sock, chatId, message) {
                 forwardingScore: 1,
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@newsletter',
+                    newsletterJid: '',
                     newsletterName: 'TRUTH MD',
                     serverMessageId: -1
                 }

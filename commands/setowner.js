@@ -114,7 +114,7 @@ function createFakeContact(message) {
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -127,7 +127,7 @@ function createFakeContact(message) {
                     forwardingScore: 1,
                     isForwarded: false,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@',
+                        newsletterJid: '',
                         newsletterName: '',
                         serverMessageId: -1
                     }
@@ -161,7 +161,7 @@ function createFakeContact(message) {
             contextInfo: {
                 forwardingScore: 1,
                 isForwarded: false,               forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@',
+                    newsletterJid: '',
                     newsletterName: '',
                     serverMessageId: -1
                 }
@@ -173,7 +173,7 @@ function createFakeContact(message) {
             contextInfo: {
                 forwardingScore: 1,
                 isForwarded: false,             forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@',
+                    newsletterJid: '',
                     newsletterName: '',
                     serverMessageId: -1
                 }

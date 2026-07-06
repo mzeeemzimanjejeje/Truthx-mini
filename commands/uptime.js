@@ -36,7 +36,7 @@ async function uptimeCommand(sock, chatId, message) {
 
                 forwardedNewsletterMessageInfo: {
 
-                    newsletterJid: '@',
+                    newsletterJid: '',
 
                     newsletterName: '',
 

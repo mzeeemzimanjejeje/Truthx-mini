@@ -58,7 +58,7 @@ async function stickercropCommand(sock, chatId, message) {
                     forwardingScore: 999,
                     isForwarded: true,
                     forwardedNewsletterMessageInfo: {
-                        newsletterJid: '@newsletter',
+                        newsletterJid: '',
                         newsletterName: ' MD',
                         serverMessageId: -1
                     }
@@ -147,7 +147,7 @@ async function stickercropCommand(sock, chatId, message) {
                 forwardingScore: 999,
                 isForwarded: true,
                 forwardedNewsletterMessageInfo: {
-                    newsletterJid: '@newsletter',
+                    newsletterJid: '',
                     newsletterName: ' MD',
                     serverMessageId: -1
                 }
