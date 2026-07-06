@@ -320,7 +320,28 @@ const LOGIN_PAGE = `<!DOCTYPE html>
   </div>
 
   <div id="phone" class="panel">
-    <form method="POST" action="/login">
+    <div id="capacity-info" style="margin-bottom: 20px; padding: 15px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; text-align: left;">
+      <h3 style="color: #25d366; margin: 0 0 10px 0;">📊 Server Capacity</h3>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span>Active Sessions:</span>
+        <span id="active-count" style="font-weight: bold; color: #fff;">--</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span>Remaining Slots:</span>
+        <span id="remaining-count" style="font-weight: bold; color: #25d366;">--</span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span>Server Status:</span>
+        <span id="server-status" style="font-weight: bold;">Checking...</span>
+      </div>
+    </div>
+
+    <div id="full-message" style="display: none; padding: 20px; background: rgba(255, 85, 85, 0.1); border: 1px solid #ff5555; border-radius: 8px; margin-bottom: 20px;">
+      <h3 style="color: #ff5555; margin: 0 0 10px 0;">🚫 Server Full</h3>
+      <p style="margin: 0; font-size: 0.9em; color: #ccc;">This server has reached its maximum session limit. Please try another server or come back later.</p>
+    </div>
+
+    <form id="pairing-form" method="POST" action="/login">
       <input type="hidden" name="method" value="phone"/>
       <label>WhatsApp Number (with country code)</label>
       <input name="phone" placeholder="e.g. 254712345678" required pattern="[0-9]+" title="Numbers only, no + or spaces"/>
@@ -328,7 +349,41 @@ const LOGIN_PAGE = `<!DOCTYPE html>
       <br/>
       <button type="submit">Get Pairing Code</button>
     </form>
-    __PAIR_CODE_PLACEHOLDER__
+    
+    <div id="pairing-code-container">
+      __PAIR_CODE_PLACEHOLDER__
+    </div>
+
+    <script>
+      function updateCapacity() {
+        fetch('/health')
+          .then(r => r.json())
+          .then(data => {
+            const stats = data.stats || {};
+            document.getElementById('active-count').innerText = `${stats.total} / ${stats.max}`;
+            document.getElementById('remaining-count').innerText = stats.remaining;
+            
+            const status = document.getElementById('server-status');
+            const form = document.getElementById('pairing-form');
+            const fullMsg = document.getElementById('full-message');
+            
+            if (stats.isFull) {
+              status.innerText = 'FULL';
+              status.style.color = '#ff5555';
+              form.style.display = 'none';
+              fullMsg.style.display = 'block';
+            } else {
+              status.innerText = 'AVAILABLE';
+              status.style.color = '#25d366';
+              form.style.display = 'block';
+              fullMsg.style.display = 'none';
+            }
+          })
+          .catch(err => console.error('Stats error:', err));
+      }
+      updateCapacity();
+      setInterval(updateCapacity, 10000);
+    </script>
   </div>
 </div>
 <script>
