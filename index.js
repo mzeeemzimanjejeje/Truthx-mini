@@ -2301,8 +2301,10 @@ async function startXeonBotInc() {
 
             if (connection === 'close') {
                 global.isBotConnected = false;
-                // Only reset welcome flags on genuine logout — NOT on every temporary disconnect.
-                // Resetting here caused the "Connected Successfully" spam on every reconnect.
+                // [FIXED] Do not reset welcomeSent or connectionMessageSent here.
+                // Only reset them on genuine logout (handled below) to prevent spamming
+                // the "Connected Successfully" message during temporary reconnections.
+                
                 const _dcCode = lastDisconnect?.error?.output?.statusCode;
                 const _dcMsg = lastDisconnect?.error?.message || 'unknown';
                 console.log('[CONNECT] Disconnected - statusCode=' + _dcCode + ', reason="' + _dcMsg + '"');

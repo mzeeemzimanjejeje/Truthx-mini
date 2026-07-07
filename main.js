@@ -665,7 +665,12 @@ async function handleMessages(sock, messageUpdate, printLog ) {
  /*━━━━━━━━━━━━━━━━━━━━*/
        // Dynamic prefix      
         // Per-session prefix read
-        const prefix = getPrefix(botJid);
+        // [FIXED] Standardize prefix: prioritize per-session setting, then config.json, then settings.js default
+        let prefix = getPrefix(botJid);
+        if (!prefix || prefix === 'none') {
+            const configPrefix = getConfig('PREFIX');
+            prefix = configPrefix || settings.defaultPrefix || '.';
+        }
 
         
         
@@ -797,7 +802,12 @@ const rawMessage = (
             // Cached mode read — avoids SQLite hit on every message (8s TTL)
             const _now_m = Date.now();
             if (!_hotCache.mode.v || _now_m - _hotCache.mode.t > _hotCache.mode.ttl) {
-                _hotCache.mode.v = getConfig('MODE', settings.commandMode || 'public');
+                // [FIXED] Check per-session mode first, then global config, then settings default
+                let currentMode = getSessionSetting(botJid, 'MODE');
+                if (!currentMode) {
+                    currentMode = getConfig('MODE', settings.commandMode || 'public');
+                }
+                _hotCache.mode.v = currentMode;
                 _hotCache.mode.t = _now_m;
             }
             const mode = _hotCache.mode.v;
