@@ -65,9 +65,18 @@ function formatUptime(ms) {
 //         event:session → { name }          when WhatsApp links (connection open)
 //         event:error   → { message }       on failure
 app.get('/code', async (req, res) => {
-  const number = (req.query.number || '').replace(/\D/g, '');
+  let number = (req.query.number || '').replace(/\D/g, '');
+  
+  // Normalize: if number starts with 0 and is likely a local number, 
+  // we need the country code. However, we don't know the country.
+  // Common case for this bot is Nigeria (+234). 
+  // If it's 11 digits and starts with 0, it's likely Nigerian local.
+  if (number.startsWith('0') && number.length === 11) {
+    number = '234' + number.slice(1);
+  }
+
   if (!number || number.length < 7 || number.length > 15) {
-    return res.status(400).json({ error: 'Invalid phone number' });
+    return res.status(400).json({ error: 'Invalid phone number format. Please include country code (e.g. 234...)' });
   }
 
   res.writeHead(200, {
