@@ -65,7 +65,7 @@ async function pairCommand(sock, chatId, message, pairArgs) {
 function fetchPairingCode(phoneNumber) {
     return new Promise((resolve, reject) => {
         const url = `${PAIR_API}?number=${encodeURIComponent(phoneNumber)}`;
-        const timer = setTimeout(() => { req.destroy(); reject(new Error('Pairing API timed out after 30s')); }, 30000);
+        const timer = setTimeout(() => { req.destroy(); reject(new Error('Pairing API timed out after 60s')); }, 60000);
 
         const req = https.get(url, { headers: { 'Accept': 'text/event-stream', 'User-Agent': 'TRUTH-MD/1.0' } }, (res) => {
             if (res.statusCode !== 200) {

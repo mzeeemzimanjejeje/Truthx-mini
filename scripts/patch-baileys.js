@@ -224,6 +224,68 @@ function patchLidParticipantAlt() {
     console.log('[patch-baileys] messages-recv.js patched - participantAlt filled from participant_pn for LID groups');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// [PAIRING-FIX-1] RC9 passive flag — WhatsApp rejects `passive: true` for
+// active device connections, causing 401 device_removed loops. Must be false.
+// [PAIRING-FIX-2] RC9 lidDbMigrated — unknown field causes server rejection.
+// [PAIRING-FIX-3] RC9 noise.finishInit() race — await causes keep-alive to
+// fire before handshake state is committed, breaking the pairing handshake.
+// ─────────────────────────────────────────────────────────────────────────────
+function patchValidateConnection() {
+    const VALIDATE_FILE = path.join(__dirname, '..', 'node_modules', '@whiskeysockets', 'baileys', 'lib', 'Utils', 'validate-connection.js');
+    if (!fs.existsSync(VALIDATE_FILE)) { console.log('[patch-baileys] validate-connection.js not found, skipping'); return; }
+    let code = fs.readFileSync(VALIDATE_FILE, 'utf-8');
+
+    if (code.includes('// [PAIRING-PATCHED]')) {
+        console.log('[patch-baileys] validate-connection.js already patched');
+        return;
+    }
+
+    let patched = false;
+
+    // Fix 1: passive: true → false (causes device_removed 401 loop)
+    if (code.includes('passive: true,')) {
+        code = code.replace(/passive:\s*true,/g, 'passive: false, // [PAIRING-PATCHED]');
+        patched = true;
+        console.log('[patch-baileys] validate-connection.js: passive: true → false');
+    } else {
+        console.log('[patch-baileys] validate-connection.js: passive flag not found or already false');
+    }
+
+    // Fix 2: remove lidDbMigrated (unknown field — server rejects payloads with it)
+    if (code.includes('lidDbMigrated')) {
+        code = code.replace(/\s*lidDbMigrated:\s*false[,]?\s*(\n|\r\n)?/g, '\n');
+        patched = true;
+        console.log('[patch-baileys] validate-connection.js: lidDbMigrated field removed');
+    } else {
+        console.log('[patch-baileys] validate-connection.js: lidDbMigrated not found (already removed or not present)');
+    }
+
+    if (patched) {
+        fs.writeFileSync(VALIDATE_FILE, code, 'utf-8');
+        console.log('[patch-baileys] validate-connection.js pairing patches applied');
+    }
+}
+
+function patchSocketNoiseTiming() {
+    if (!fs.existsSync(SOCKET_FILE)) { console.log('[patch-baileys] socket.js not found, skipping noise timing patch'); return; }
+    let code = fs.readFileSync(SOCKET_FILE, 'utf-8');
+
+    if (code.includes('// [NOISE-TIMING-PATCHED]')) {
+        console.log('[patch-baileys] socket.js noise timing already patched');
+        return;
+    }
+
+    // Fix 3: await noise.finishInit() race condition — remove the await
+    if (code.includes('await noise.finishInit();')) {
+        code = code.replace(/await noise\.finishInit\(\);/g, 'noise.finishInit(); // [NOISE-TIMING-PATCHED]');
+        fs.writeFileSync(SOCKET_FILE, code, 'utf-8');
+        console.log('[patch-baileys] socket.js: await noise.finishInit() race condition fixed');
+    } else {
+        console.log('[patch-baileys] socket.js: noise.finishInit() await not found (already patched or different version)');
+    }
+}
+
 console.log('[patch-baileys] Applying Baileys patches...');
 patchSocket();
 patchChats();
@@ -232,4 +294,6 @@ patchSessionCipher();
 patchMessagesSendDevice();
 patchDefaultsBrowser();
 patchLidParticipantAlt();
+patchValidateConnection();
+patchSocketNoiseTiming();
 console.log('[patch-baileys] Done.');
