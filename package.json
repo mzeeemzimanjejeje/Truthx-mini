@@ -12,6 +12,7 @@
     "reset-session": "node reset-session.js",
     "start:clean": "npm run cleanup && npm run start:optimized",
     "start:fresh": "npm run reset-session && npm start",
+    "heroku-postbuild": "npm rebuild sharp && npm rebuild better-sqlite3",
     "install:panel": "npm install --omit=dev --no-audit --no-fund --legacy-peer-deps",
     "install:force": "npm install --omit=dev --force --no-audit --no-fund",
     "push": "node scripts/autopush.js",

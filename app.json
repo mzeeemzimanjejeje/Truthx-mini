@@ -1,0 +1,45 @@
+{
+  "name": "Truthx-mini",
+  "description": "TRUTH-MD Multi-user WhatsApp Bot Platform",
+  "repository": "https://github.com/mzeeemzimanjejeje/Truthx-mini",
+  "logo": "https://raw.githubusercontent.com/mzeeemzimanjejeje/Truthx-mini/main/assets/menu.jpg",
+  "keywords": ["whatsapp", "bot", "baileys", "multi-user"],
+  "env": {
+    "SESSION_ID": {
+      "description": "WhatsApp session string (TRUTH-MD:~xxxxx) — skip to pair via web UI instead",
+      "required": false
+    },
+    "OWNER_NUMBER": {
+      "description": "Your WhatsApp number with country code, no + (e.g. 254712345678)",
+      "required": true
+    },
+    "DATABASE_URL": {
+      "description": "PostgreSQL URL (Recommended for session persistence)",
+      "required": false
+    },
+    "BOT_NAME": {
+      "description": "Bot display name",
+      "value": "TRUTH-MD",
+      "required": false
+    },
+    "PREFIX": {
+      "description": "Command prefix",
+      "value": ".",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    },
+    {
+      "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+    }
+  ]
+}
