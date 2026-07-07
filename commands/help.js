@@ -244,26 +244,45 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
     const tylorkids = thumbnailBuffer;
     const plink = "https://github.com/Courtney250/TRUTH-MD";
 
-    // Step 1: Send the image with a SHORT header caption (stays well within 1024 chars)
-    await sock.sendMessage(chatId, {
-        image: tylorkids,
-        caption: headerText,
-        contextInfo: {
-            externalAdReply: {
-                showAdAttribution: false,
-                title: botname,
-                body: ownername,
-                thumbnail: tylorkids,
-                sourceUrl: plink,
-                mediaType: 1,
-                renderLargerThumbnail: true,
+    // [FIX] Consolidate into ONE message. 
+    // We send the image with the FULL menu as the caption. 
+    // Note: If the menu is extremely long (>1024 chars), we'll send it as text with the image as a preview
+    // to ensure it never gets truncated by WhatsApp's caption limits.
+    const fullText = headerText + "\n\n" + menuText;
+    
+    if (fullText.length < 1000) {
+        await sock.sendMessage(chatId, {
+            image: tylorkids,
+            caption: fullText,
+            contextInfo: {
+                externalAdReply: {
+                    showAdAttribution: false,
+                    title: botname,
+                    body: ownername,
+                    thumbnail: tylorkids,
+                    sourceUrl: plink,
+                    mediaType: 1,
+                    renderLargerThumbnail: true,
+                },
             },
-        },
-    }, { quoted: fkontak });
-
-    // Step 2: Send the FULL menu as a text message (no caption limit — up to 65536 chars)
-    // This ensures ALL 440+ commands are displayed without truncation
-    await sock.sendMessage(chatId, { text: menuText }, { quoted: fkontak });
+        }, { quoted: fkontak });
+    } else {
+        // Menu is too long for caption — send as text with image in externalAdReply
+        await sock.sendMessage(chatId, { 
+            text: fullText,
+            contextInfo: {
+                externalAdReply: {
+                    showAdAttribution: false,
+                    title: botname,
+                    body: ownername,
+                    thumbnail: tylorkids,
+                    sourceUrl: plink,
+                    mediaType: 1,
+                    renderLargerThumbnail: true,
+                },
+            },
+        }, { quoted: fkontak });
+    }
 }
 
 // Main help command function
@@ -319,9 +338,7 @@ async function helpCommand(sock, chatId, message) {
 
     try {
         const fkontak = createFakeContact(message);
-        // Send loading message first and wait for it to be queued, so it
-        // always arrives before the menu (thumbnail read is near-instant)
-        await sock.sendMessage(chatId, { text: '*Loading menu...♻️*' }, { quoted: fkontak }).catch(() => {});
+        // [FIX] Removed loading message to ensure only ONE menu message appears.
         sock.sendMessage(chatId, { react: { text: '⏳', key: message.key } }).catch(() => {});
 
         // Load thumbnail (sync read, very fast)
