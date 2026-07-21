@@ -250,6 +250,9 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
     // to ensure it never gets truncated by WhatsApp's caption limits.
     const fullText = headerText + "\n\n" + menuText;
     
+    // Baileys externalAdReply expects thumbnail as base64 string, not a Buffer
+    const thumbnailB64 = tylorkids instanceof Buffer ? tylorkids.toString('base64') : tylorkids;
+
     if (fullText.length < 1000) {
         await sock.sendMessage(chatId, {
             image: tylorkids,
@@ -259,7 +262,7 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
                     showAdAttribution: false,
                     title: botname,
                     body: ownername,
-                    thumbnail: tylorkids,
+                    thumbnail: thumbnailB64,
                     sourceUrl: plink,
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -275,7 +278,7 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
                     showAdAttribution: false,
                     title: botname,
                     body: ownername,
-                    thumbnail: tylorkids,
+                    thumbnail: thumbnailB64,
                     sourceUrl: plink,
                     mediaType: 1,
                     renderLargerThumbnail: true,
@@ -352,10 +355,9 @@ async function helpCommand(sock, chatId, message) {
 
     } catch (error) {
         console.error('Error in help command:', error);
-        const fkontak = createFakeContact(message);
         try {
-            // Fallback: send everything as text
-            await sock.sendMessage(chatId, { text: headerText + '\n' + menuText }, { quoted: fkontak });
+            // Fallback: plain text quoted on the real message — works in groups and DMs
+            await sock.sendMessage(chatId, { text: headerText + '\n' + menuText }, { quoted: message });
         } catch (_) {}
     }
 }
