@@ -328,11 +328,10 @@ async function helpCommand(sock, chatId, message) {
     if (!Number.isFinite(ping) || ping < 1) ping = (now - start) || 1;
     if (ping > 60000) ping = now - start || 1; // clock skew guard
 
-    // Build header (short — for image caption, stays within 1024 chars)
+    // Build header (short — for image caption, no watermark here)
     let headerText = generateHeader(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
-    headerText = applyWatermark(headerText);
 
-    // Build full menu text (sent as text message — no 1024-char limit applies)
+    // Build full menu text — watermark goes at the very end, not the middle
     let menuText = generateMenu(pushname, currentMode, hostName, ping, uptimeFormatted, botJid);
     menuText = applyWatermark(menuText);
 
