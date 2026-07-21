@@ -14,20 +14,18 @@ if (!fs.existsSync('./data')) {
 
 /**
  * Resolve the active watermark text.
- * Priority: process.env.WATERMARK → file → none
- * Skips blank / bare JSON placeholders ({} / []).
+ * Priority: process.env.WATERMARK → lib/watermark.getWatermarkText()
+ * lib/watermark already checks the file and falls back to the built-in default.
  */
 function _resolveWatermark() {
-    // 1. Persistent: Heroku config var (survives restarts)
+    // 1. Persistent: Heroku config var set by .setwatermark (survives restarts)
     const envWm = (process.env.WATERMARK || '').trim();
     if (envWm && envWm !== '{}' && envWm !== '[]') return envWm;
 
-    // 2. Session-only: file written by .setwatermark in this dyno session
+    // 2. File + built-in default ("Truth MD is on fire 🔥🚒") via lib/watermark
     try {
-        if (fs.existsSync(WATERMARK_FILE)) {
-            const fileWm = fs.readFileSync(WATERMARK_FILE, 'utf8').trim();
-            if (fileWm && fileWm !== '{}' && fileWm !== '[]') return fileWm;
-        }
+        const { getWatermarkText } = require('../lib/watermark');
+        return getWatermarkText();
     } catch (_) {}
 
     return null;
