@@ -338,7 +338,8 @@ async function helpCommand(sock, chatId, message) {
 
     try {
         const fkontak = createFakeContact(message);
-        // [FIX] Removed loading message to ensure only ONE menu message appears.
+        // Send loading notification first, then deliver the full menu
+        await sock.sendMessage(chatId, { text: 'loading menu.....♻️' }, { quoted: message }).catch(() => {});
         sock.sendMessage(chatId, { react: { text: '⏳', key: message.key } }).catch(() => {});
 
         // Load thumbnail (sync read, very fast)

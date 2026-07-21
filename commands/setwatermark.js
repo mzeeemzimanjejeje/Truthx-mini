@@ -61,7 +61,11 @@ function applyWatermark(originalText) {
             return originalText;
         }
         
-        const watermark = fs.readFileSync(WATERMARK_FILE, 'utf8');
+        const watermark = fs.readFileSync(WATERMARK_FILE, 'utf8').trim();
+        // Skip empty, whitespace-only, or bare JSON placeholders like {} or []
+        if (!watermark || watermark === '{}' || watermark === '[]') {
+            return originalText;
+        }
         return `${originalText}\n\n${watermark}`;
     } catch (error) {
         return originalText;
