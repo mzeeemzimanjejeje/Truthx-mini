@@ -879,14 +879,14 @@ const rawMessage = (
             ];
             if (userMessage) {
                 detectionTasks.push(handleBadwordDetection(sock, chatId, message, userMessage, senderId).catch(() => {}));
-                detectionTasks.push(Antilink(message, sock).catch(() => {}));
+                detectionTasks.push(Antilink(message, sock, senderId).catch(() => {}));
             }
             Promise.all(detectionTasks).catch(() => {});
         }
 
         // Channel antilink: run separately for @newsletter JIDs
         if (isChannel && userMessage) {
-            Antilink(message, sock).catch(() => {});
+            Antilink(message, sock, senderId).catch(() => {});
         }
 
         // PM blocker: block non-owner DMs when enabled — skip for channels (newsletter JIDs are not real DMs)
