@@ -238,18 +238,16 @@ function createFakeContact(message) {
 // This bypasses WhatsApp's 1024-char image caption limit so ALL 440+ commands are visible
 async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, menustyle, thumbnailBuffer, pushname) {
     const botJid = sock.user?.id ? sock.user.id.split(':')[0] + '@s.whatsapp.net' : null;
-    const fkontak = createFakeContact(message);
     const botname = getBotName(botJid);
     const ownername = getOwnerName(botJid);
     const tylorkids = thumbnailBuffer;
     const plink = "https://github.com/Courtney250/TRUTH-MD";
 
-    // [FIX] Consolidate into ONE message. 
-    // We send the image with the FULL menu as the caption. 
-    // Note: If the menu is extremely long (>1024 chars), we'll send it as text with the image as a preview
-    // to ensure it never gets truncated by WhatsApp's caption limits.
+    // Consolidate into ONE message.
+    // If menu is extremely long (>1024 chars) send as text with externalAdReply preview
+    // to bypass WhatsApp's caption limit so all 440+ commands are visible.
     const fullText = headerText + "\n\n" + menuText;
-    
+
     // Baileys externalAdReply expects thumbnail as base64 string, not a Buffer
     const thumbnailB64 = tylorkids instanceof Buffer ? tylorkids.toString('base64') : tylorkids;
 
@@ -268,10 +266,10 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
                     renderLargerThumbnail: true,
                 },
             },
-        }, { quoted: fkontak });
+        }, { quoted: message });
     } else {
         // Menu is too long for caption — send as text with image in externalAdReply
-        await sock.sendMessage(chatId, { 
+        await sock.sendMessage(chatId, {
             text: fullText,
             contextInfo: {
                 externalAdReply: {
@@ -284,7 +282,7 @@ async function sendMenuWithStyle(sock, chatId, message, headerText, menuText, me
                     renderLargerThumbnail: true,
                 },
             },
-        }, { quoted: fkontak });
+        }, { quoted: message });
     }
 }
 
