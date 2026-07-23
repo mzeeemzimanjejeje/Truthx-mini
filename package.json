@@ -25,7 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/boom": "^10.0.1",
-    "@whiskeysockets/baileys": "^7.0.0-rc12",
+    "@whiskeysockets/baileys": "^7.0.0-rc13",
     "awesome-phonenumber": "^5.11.0",
     "axios": "^1.13.6",
     "better-sqlite3": "^12.8.0",
